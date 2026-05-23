@@ -1,0 +1,52 @@
+import os
+from typing import Any
+
+import httpx
+from dotenv import load_dotenv
+
+
+APIPERU_DNI_URL = "https://apiperu.dev/api/dni"
+
+
+class ApiPeruConfigError(Exception):
+    pass
+
+
+class ApiPeruRequestError(Exception):
+    pass
+
+async def consult_dni_apiperu (dni:str ) -> dict[str,Any]:
+    load_dotenv()
+    token = os.getenv("APIPERU_TOKEN")
+
+    if not token:
+        raise ApiPeruConfigError("configura tu token dentro del archivo .env")
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                APIPERU_DNI_URL,
+                json={"dni":dni},
+                headers={"Authorization": f"Bearer {token}",
+                         "Content-Type": "application/json"},
+                timeout=10.0,
+            )
+        except httpx.RequestError as exc:
+            raise ApiPeruRequestError(f"Error de conexion con ApiPeru: {exc}") from exc
+    
+    if response.status_code in (403, 401):
+        raise ApiPeruRequestError("Token de autenticacion invalido o expirado")
+    
+    if response.status_code >= 400:
+        raise ApiPeruRequestError(f"Error de ApiPeru: {response.status_code} - {response.text}")
+    
+    payload = response.json()
+
+    if not payload.get("success", False):
+        raise ApiPeruRequestError(payload.get("message", "DNI no encontrado"))
+
+    return payload.get("data") or {}
+
+
+
+
