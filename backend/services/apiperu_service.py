@@ -1,8 +1,7 @@
-import os
 from typing import Any
 
 import httpx
-from dotenv import load_dotenv
+from core.config import settings
 
 
 APIPERU_DNI_URL = "https://apiperu.dev/api/dni"
@@ -16,8 +15,7 @@ class ApiPeruRequestError(Exception):
     pass
 
 async def consult_dni_apiperu (dni:str ) -> dict[str,Any]:
-    load_dotenv()
-    token = os.getenv("APIPERU_TOKEN")
+    token = settings.apiperu_token
 
     if not token:
         raise ApiPeruConfigError("configura tu token dentro del archivo .env")

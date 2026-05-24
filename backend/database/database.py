@@ -1,10 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from core.config import settings
 
-DATA_URL = "mssql+pyodbc://oherasa:123456789@DESKTOP-Q4AGH5P\SQLEXPRESS/ventasdb?driver=ODBC+Driver+17+for+SQL+Server"
-
-engine = create_engine(DATA_URL)
+engine = create_engine(settings.database_url)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

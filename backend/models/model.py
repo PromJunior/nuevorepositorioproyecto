@@ -53,7 +53,7 @@ class Order(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     client_id = Column(Integer, ForeignKey("clients.id"))
     cash_session_id = Column(Integer, ForeignKey("cash_sessions.id"), nullable=True)
-    status_id = Column(Integer, ForeignKey("status.id"), nullable=True)
+    status_id = Column(Integer, ForeignKey("order_status.id"), nullable=True)
 
     # Relaciones entre tablas user, cliente, sesión de caja y orden
     user = relationship("User", back_populates="orders")
@@ -104,9 +104,12 @@ class Payment(Base):
     # llaves foráneas a orden, método de pago y cierre de caja, con ondelete SET NULL para mantener el historial de pagos aunque se borre la orden o el cierre de caja  
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
     id_payment_method = Column(Integer, ForeignKey("payment_methods.id"), nullable=False)
-    # Relaciones con orden y método de pago
+    cash_closing_id = Column(Integer, ForeignKey("cash_closings.id", ondelete="SET NULL"), nullable=True)
+
+    # Relaciones con orden, método de pago y cierre de caja
     order = relationship("Order", back_populates="payment_order")
     payment_method = relationship("PaymentMethod", back_populates="payments_pm")
+    cash_closing = relationship("CashClosing", back_populates="payments")
 
 
 #-----------------------> modelo de métodos de pago <------------------------
@@ -122,6 +125,20 @@ class PaymentMethod(Base):
     is_active = Column(Boolean, default=True) # para habilitar o deshabilitar métodos de pago sin eliminarlos de la base de datos, útil para promociones o cambios en las opciones de pago
     
     payments_pm = relationship("Payment", back_populates="payment_method")
+
+
+#-----------------------> NUEVO: modelo de cierre de caja diario <------------------------
+class CashClosing(Base):
+    __tablename__ = "cash_closings"
+
+    id = Column(Integer, autoincrement=True, primary_key=True, index=True)
+    closing_date = Column(DateTime, default=datetime.utcnow)
+    expected_amount = Column(DECIMAL(10, 2), nullable=False)
+    actual_amount = Column(DECIMAL(10, 2), nullable=False)
+    differences = Column(DECIMAL(10, 2), nullable=False)
+    notes = Column(String(255), nullable=True)
+
+    payments = relationship("Payment", back_populates="cash_closing")
 
 
 #-----------------------> modelo de cierre de caja inicio - ventas - cierre <------------------------
