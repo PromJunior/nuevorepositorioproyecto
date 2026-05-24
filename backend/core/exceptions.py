@@ -24,3 +24,6 @@ class PaymentMethodNotFoundError(DomainError):
 
 class OrderNotFoundError(DomainError):
     pass
+
+class NoOpenCashSessionError(DomainError):
+    pass

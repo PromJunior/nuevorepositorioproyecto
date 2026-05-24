@@ -34,12 +34,12 @@ def get_order_db(skip: int = 0, limit: int = 100, db: Session = Depends(get_db),
 
 @router.put("/update_order/{order_id}")
 def update_order_db(order_id: int, order_data: OrderUpdate, db: Session = Depends(get_db), current_user: User = Depends(require_role("admin"))):
-    return SalesService.update_order(db=db, order_id=order_id, order_data=order_data)
+    return SalesService.update_order(db=db, order_id=order_id, order_data=order_data, user_id=current_user.id)
     
 
 @router.delete("/delete_order/{order_id}")
 def delete_order_db(order_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_role("admin"))):
-    return SalesService.delete_order(db=db, order_id=order_id)
+    return SalesService.delete_order(db=db, order_id=order_id, user_id=current_user.id)
 
 
 @router.get("/sales_report/")

@@ -5,8 +5,8 @@ from typing import List
 from datetime import timedelta
 
 from database.database import get_db
+from auth.password import verify_password
 from auth.security import (
-    verify_password,
     create_access_token,
     get_current_user,
     get_user_role_name,

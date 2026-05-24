@@ -1,100 +1,109 @@
 from sqlalchemy.orm import Session
-from datetime import datetime
-import pytz
 
-from models.model import Client, Product, PaymentMethod, Order
+from models.model import Client, PaymentMethod, Order, Product
 from schemas.order_schema import OrderCreate, OrderUpdate
 from core.exceptions import (
     ClientNotFoundError,
     ProductNotFoundError,
-    OutOfStockError,
-    InsufficientStockError,
     InvalidPriceError,
     PaymentMethodNotFoundError,
-    OrderNotFoundError
+    OrderNotFoundError,
+    NoOpenCashSessionError,
 )
 from crud import order_crud
+from crud.cash_session_crud import get_open_session_for_update
 
-PERU_TZ = pytz.timezone('America/Lima')
 
 class SalesService:
     @staticmethod
     def create_order(db: Session, order_create: OrderCreate, user_id: int):
-        # 1. Validar existencia del cliente
+        cash_session = get_open_session_for_update(db=db, user_id=user_id)
+        if not cash_session:
+            raise NoOpenCashSessionError(
+                "No tienes una sesión de caja abierta. Abre caja primero para vender."
+            )
+
         client_db = db.query(Client).filter(Client.id == order_create.client_id).first()
         if not client_db:
-            raise ClientNotFoundError(f"Cliente con id {order_create.client_id} no encontrado")
+            raise ClientNotFoundError(
+                f"Cliente con id {order_create.client_id} no encontrado"
+            )
 
-        # 2. Validar métodos de pago
-        metodo_de_pago = db.query(PaymentMethod).filter(PaymentMethod.id == order_create.payment_method_id).first()
+        metodo_de_pago = (
+            db.query(PaymentMethod)
+            .filter(PaymentMethod.id == order_create.payment_method_id)
+            .first()
+        )
         if not metodo_de_pago:
-            raise PaymentMethodNotFoundError(f"Método de pago con id {order_create.payment_method_id} no encontrado")
+            raise PaymentMethodNotFoundError(
+                f"Método de pago con id {order_create.payment_method_id} no encontrado"
+            )
 
-        # 3. Validar stock, stockProduct, y precios de cada ítem
         for item in order_create.items:
-            product_db = db.query(Product).filter(Product.id == item.product_id).first()
+            product_db = (
+                db.query(Product)
+                .filter(Product.id == item.product_id)
+                .with_for_update()
+                .first()
+            )
             if not product_db:
-                raise ProductNotFoundError(f"Producto con id {item.product_id} no encontrado")
-
-            if not product_db.stockProduct or product_db.stock <= 0:
-                raise OutOfStockError(f"Producto {product_db.name_product} sin stock disponible")
-
-            if product_db.stock < item.quantity:
-                raise InsufficientStockError(f"Stock insuficiente para el producto {product_db.name_product}")
+                raise ProductNotFoundError(
+                    f"Producto con id {item.product_id} no encontrado"
+                )
 
             if item.price <= 0:
-                raise InvalidPriceError(f"Precio inválido para el producto {product_db.name_product}")
+                raise InvalidPriceError(
+                    f"Precio inválido para el producto {product_db.name_product}"
+                )
 
-        # 4. Delegar al CRUD para la persistencia transaccional limpia
-        return order_crud.create_order_db_record(db=db, order_create=order_create, user_id=user_id)
+        return order_crud.create_order_db_record(
+            db=db,
+            order_create=order_create,
+            user_id=user_id,
+            cash_session_id=cash_session.id,
+        )
 
     @staticmethod
-    def update_order(db: Session, order_id: int, order_data: OrderUpdate):
-        # 1. Validar existencia de la orden
+    def update_order(db: Session, order_id: int, order_data: OrderUpdate, user_id: int):
         db_order = db.query(Order).filter(Order.id == order_id).first()
         if not db_order:
             raise OrderNotFoundError("La orden no existe")
 
-        # 2. Validar existencia del cliente
         client_db = db.query(Client).filter(Client.id == order_data.client_id).first()
         if not client_db:
-            raise ClientNotFoundError(f"Cliente con id {order_data.client_id} no encontrado")
+            raise ClientNotFoundError(
+                f"Cliente con id {order_data.client_id} no encontrado"
+            )
 
-        # 3. Validar stock disponible para la actualización
-        # Para validar correctamente, sumamos temporalmente el stock original
-        for olditem in db_order.order_items_order:
-            product_db = db.query(Product).filter(Product.id == olditem.product_id).first()
-            if product_db:
-                product_db.stock += olditem.quantity
+        for item in order_data.items:
+            product_db = (
+                db.query(Product)
+                .filter(Product.id == item.product_id)
+                .with_for_update()
+                .first()
+            )
+            if not product_db:
+                raise ProductNotFoundError(
+                    f"Producto con id {item.product_id} no encontrado"
+                )
+            if item.price <= 0:
+                raise InvalidPriceError(
+                    f"Precio inválido para el producto {db_product.name_product}"
+                )
 
-        try:
-            for item in order_data.items:
-                db_product = db.query(Product).filter(Product.id == item.product_id).first()
-                if not db_product:
-                    raise ProductNotFoundError(f"Producto con id {item.product_id} no encontrado")
-                if db_product.stock < item.quantity:
-                    raise InsufficientStockError(f"Stock insuficiente para el producto {db_product.name_product}")
-                if item.price <= 0:
-                    raise InvalidPriceError(f"Precio inválido para el producto {db_product.name_product}")
-        finally:
-            # Revertimos el stock sumado temporalmente para dejar que el CRUD transaccional maneje la persistencia limpia
-            for olditem in db_order.order_items_order:
-                product_db = db.query(Product).filter(Product.id == olditem.product_id).first()
-                if product_db:
-                    product_db.stock -= olditem.quantity
-
-        # 4. Delegar al CRUD la actualización
-        return order_crud.update_order_db_record(db=db, order_id=order_id, order_data=order_data)
+        return order_crud.update_order_db_record(
+            db=db, order_id=order_id, order_data=order_data, user_id=user_id
+        )
 
     @staticmethod
-    def delete_order(db: Session, order_id: int):
-        # 1. Validar existencia de la orden
+    def delete_order(db: Session, order_id: int, user_id: int):
         db_order = db.query(Order).filter(Order.id == order_id).first()
         if not db_order:
             raise OrderNotFoundError("La orden no existe")
 
-        # 2. Delegar la eliminación lógica/física al CRUD
-        return order_crud.delete_order_db_record(db=db, order_id=order_id)
+        return order_crud.delete_order_db_record(
+            db=db, order_id=order_id, user_id=user_id
+        )
 
     @staticmethod
     def get_sales_report(db: Session, user_id: int = None):

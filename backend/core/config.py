@@ -4,7 +4,6 @@ import os
 
 class Settings(BaseSettings):
     database_url: str = Field(
-        default="mysql+pymysql://root:root@localhost:3306/ventasdb",
         validation_alias="DATABASE_URL"
     )
     apiperu_token: str = Field(

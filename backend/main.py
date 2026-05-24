@@ -7,7 +7,11 @@ from core.exceptions import (
     ClientNotFoundError,
     ProductNotFoundError,
     PaymentMethodNotFoundError,
-    OrderNotFoundError
+    OrderNotFoundError,
+    OutOfStockError,
+    InsufficientStockError,
+    NoOpenCashSessionError,
+    InvalidPriceError,
 )
 
 app = FastAPI(title="API de Gestión de Pedidos")
@@ -15,8 +19,12 @@ app = FastAPI(title="API de Gestión de Pedidos")
 @app.exception_handler(DomainError)
 def domain_exception_handler(request: Request, exc: DomainError):
     status_code = 400
-    if isinstance(exc, (ClientNotFoundError, ProductNotFoundError, PaymentMethodNotFoundError, OrderNotFoundError)):
+    if isinstance(exc, NoOpenCashSessionError):
+        status_code = 403
+    elif isinstance(exc, (ClientNotFoundError, ProductNotFoundError, PaymentMethodNotFoundError, OrderNotFoundError)):
         status_code = 404
+    elif isinstance(exc, (OutOfStockError, InsufficientStockError)):
+        status_code = 409
     return JSONResponse(
         status_code=status_code,
         content={"detail": exc.message}

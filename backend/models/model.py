@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DECIMAL, Date, ForeignKey, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Boolean
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database.database import Base
@@ -10,7 +10,7 @@ class Product(Base):
 
     id = Column(Integer, autoincrement=True, primary_key=True, index=True)
     name_product = Column(String(255), nullable=False, unique=True, index=True)
-    price = Column(DECIMAL(10, 2), nullable=False, default=0.00)
+    price = Column(Numeric(10, 2), nullable=False, default=0.00)
     stockProduct = Column(Boolean, default=True)# stock disponible o no, se actualiza cada vez que se realiza una venta o compra, si el stock llega a 0 se pone en false, si se repone el stock se vuelve a poner en true
     stock = Column(Integer, nullable=False, default=0) # cantidad de stock disponible, se actualiza cada vez que se realiza una venta o compra, si el stock llega a 0 se pone en false, si se repone el stock se vuelve a poner en true
     description = Column(String(255))# descripcion del producto, puede ser útil para el vendedor al momento de realizar la venta, o para el cliente al momento de consultar el producto en el catálogo
@@ -43,7 +43,7 @@ class Order(Base):
 
     id = Column(Integer, autoincrement=True, primary_key=True, index=True)
     order_date = Column(DateTime, default=datetime.utcnow)
-    total_amount = Column(DECIMAL(10, 2))
+    total_amount = Column(Numeric(10, 2))
 
     # estado activo o inactivo para permitir anulaciones sin eliminar registros, útil para auditorías o seguimiento histórico de ventas
     is_active = Column(Boolean, default=True)
@@ -79,8 +79,8 @@ class OrderItem(Base):
     id = Column(Integer, autoincrement=True, primary_key=True, index=True)
    
     quantity = Column(Integer)
-    price = Column(DECIMAL(10, 2))
-    sub_amount = Column(DECIMAL(10, 2))
+    price = Column(Numeric(10, 2))
+    sub_amount = Column(Numeric(10, 2))
     date_added = Column(DateTime, default=datetime.utcnow)
 
     # llaves foráneas a orden y producto, con ondelete CASCADE para eliminar ítems si se borra la orden
@@ -99,7 +99,7 @@ class Payment(Base):
     id = Column(Integer, autoincrement=True, primary_key=True, index=True)
    
     payment_date = Column(DateTime, default=datetime.utcnow)
-    amount = Column(DECIMAL(10, 2))
+    amount = Column(Numeric(10, 2))
 
     # llaves foráneas a orden, método de pago y cierre de caja, con ondelete SET NULL para mantener el historial de pagos aunque se borre la orden o el cierre de caja  
     order_id = Column(Integer, ForeignKey("orders.id"), nullable=False)
@@ -133,9 +133,9 @@ class CashClosing(Base):
 
     id = Column(Integer, autoincrement=True, primary_key=True, index=True)
     closing_date = Column(DateTime, default=datetime.utcnow)
-    expected_amount = Column(DECIMAL(10, 2), nullable=False)
-    actual_amount = Column(DECIMAL(10, 2), nullable=False)
-    differences = Column(DECIMAL(10, 2), nullable=False)
+    expected_amount = Column(Numeric(10, 2), nullable=False)
+    actual_amount = Column(Numeric(10, 2), nullable=False)
+    differences = Column(Numeric(10, 2), nullable=False)
     notes = Column(String(255), nullable=True)
 
     payments = relationship("Payment", back_populates="cash_closing")
@@ -146,12 +146,12 @@ class CashSession (Base):
     __tablename__ = "cash_sessions"
 
     id = Column(Integer, autoincrement=True, primary_key=True, index=True)
-    opening_amount = Column(DECIMAL(10, 2), nullable=False)
+    opening_amount = Column(Numeric(10, 2), nullable=False)
     opening_time = Column(DateTime, default=datetime.utcnow)
-    closing_amount = Column(DECIMAL(10, 2), nullable=True)
+    closing_amount = Column(Numeric(10, 2), nullable=True)
     closing_time = Column(DateTime, nullable=True)
-    expected_amount = Column(DECIMAL(10, 2), nullable=True)
-    difference = Column(DECIMAL(10, 2), nullable=True)
+    expected_amount = Column(Numeric(10, 2), nullable=True)
+    difference = Column(Numeric(10, 2), nullable=True)
     status = Column(String(20), default="OPEN") # 'OPEN', 'CLOSED'. útil para el seguimiento del proceso de caja y para permitir conciliaciones sin eliminar registros
 
     # Llave foránea a usuario, con ondelete RESTRICT para evitar eliminar usuarios con sesiones de caja asociadas
@@ -187,7 +187,7 @@ class Purchase(Base):
     
     purchase_date = Column(DateTime, default=datetime.utcnow)
     invoice_number = Column(String(50), nullable=True) # Nro de Comprobante para auditorías o seguimiento contable como facturas, boletas, etc.
-    total_amount = Column(DECIMAL(10, 2), nullable=False, default=0.00)
+    total_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Llaves foráneas a proveedor y usuario
@@ -216,8 +216,8 @@ class PurchaseItem(Base):
     id = Column(Integer, autoincrement=True, primary_key=True, index=True)
     
     quantity = Column(Integer, nullable=False)
-    unit_cost = Column(DECIMAL(10, 2), nullable=False) # Costo real de adquisición
-    sub_amount = Column(DECIMAL(10, 2), nullable=False)
+    unit_cost = Column(Numeric(10, 2), nullable=False) # Costo real de adquisición
+    sub_amount = Column(Numeric(10, 2), nullable=False)
 
     # fecha de registro del ítem, útil para auditorías o seguimiento de compras
     purchase_id = Column(Integer, ForeignKey("purchases.id", ondelete="CASCADE"), nullable=False)
@@ -246,11 +246,11 @@ class InventoryTransaction(Base):
     source_id = Column(Integer, nullable=True)           # ID del documento origen
     
     quantity = Column(Integer, nullable=False)           # Cantidad afectada (siempre > 0)
-    unit_cost = Column(DECIMAL(10, 2), nullable=False)   # Costo del producto en este movimiento
+    unit_cost = Column(Numeric(10, 2), nullable=False)   # Costo del producto en este movimiento
     
     # Histórico del Balance (Indispensable para reportes visuales instantáneos)
     balance_stock = Column(Integer, nullable=False)      # Stock resultante tras esta operación
-    balance_value = Column(DECIMAL(12, 2), nullable=False) # Valorización del almacén (Stock * Costo)
+    balance_value = Column(Numeric(12, 2), nullable=False) # Valorización del almacén (Stock * Costo)
     
     created_at = Column(DateTime, default=datetime.utcnow)
 

@@ -1,5 +1,6 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import datetime
+from typing import Optional
 
 class CashSessionOpen(BaseModel):
     opening_amount: float
@@ -7,18 +8,17 @@ class CashSessionOpen(BaseModel):
 class CashSessionClose(BaseModel):
     closing_time: datetime
 
-#-----------------------> modelo de respuesta para cierre de caja          <------------------------  
-class CashSessionResponsive(BaseModel):
+#-----------------------> modelo de respuesta para sesión de caja <------------------------
+class CashSessionResponse(BaseModel):
     id: int
     user_id: int
     opening_amount: float
-    opning_time: datetime
-    #cierre de caja con fecha y hora, monto esperado y diferencia
-    closing_amount: float
-    closing_time: datetime
-    expected_amount: float | None
-    difference: float| None
+    opening_time: datetime
+    closing_amount: Optional[float] = None
+    closing_time: Optional[datetime] = None
+    expected_amount: Optional[float] = None
+    difference: Optional[float] = None
     status: str
-    class Config:
-        from_attributes = True
+
+    model_config = ConfigDict(from_attributes=True)
 
