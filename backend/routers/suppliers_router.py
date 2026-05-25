@@ -47,7 +47,8 @@ async def consult_supplier_ruc(
         address=data.get("direccion_completa") or data.get("direccion"),
         state=data.get("estado"),
         condition=data.get("condicion"),
-        ubigeo=data.get("ubigeo"),
+        ubigeo=" - ".join(filter(None, data.get("ubigeo", []))) if isinstance(data.get("ubigeo"), list)
+        else data.get("ubigeo", ""),
         departamento=data.get("departamento"),
         provincia=data.get("provincia"),
         distrito=data.get("distrito"),

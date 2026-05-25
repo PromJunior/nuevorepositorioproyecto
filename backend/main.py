@@ -14,6 +14,8 @@ from core.exceptions import (
     InvalidPriceError,
 )
 
+
+
 app = FastAPI(title="API de Gestión de Pedidos")
 
 @app.exception_handler(DomainError)
@@ -36,3 +38,15 @@ setup_cors(app)
 @app.get("/")
 def root():
     return {"message": "Bienvenido al sistema de ventas"}
+
+from database.seed import create_initial_admin
+from database.database import SessionLocal
+
+@app.on_event("startup")
+def startup_event():
+    db = SessionLocal()
+
+    try:
+        create_initial_admin(db)
+    finally:
+        db.close()

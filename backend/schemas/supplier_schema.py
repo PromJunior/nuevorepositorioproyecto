@@ -25,10 +25,10 @@ class SupplierResponse(SupplierBase):
 class RucResponse(BaseModel):
     ruc: str
     company_name: str
-    address: Optional[str] = None
-    state: Optional[str] = None
-    condition: Optional[str] = None
-    ubigeo: Optional[str] = None
-    departamento: Optional[str] = None
-    provincia: Optional[str] = None
-    distrito: Optional[str] = None
+    address: str | None = None
+    state: str | None = None
+    condition: str | None = None
+    ubigeo: str
+    departamento: str | None = None
+    provincia: str | None = None
+    distrito: str | None = None
