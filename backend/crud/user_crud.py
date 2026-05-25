@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session, joinedload
 from models.model import Roles, User
 from schemas.user_schema import UserUpdate, RoleCreate
 # MEJORA 2: Importamos las funciones de encriptación centralizadas de security.py
-from auth.security import get_password_hash, verify_password 
+from auth.password import get_password_hash
 
 # ==============================================================================
 # ===                            CRUD DE ROLES                               ===

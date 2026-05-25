@@ -7,10 +7,21 @@ from models.model import CashSession, Order, Payment, PaymentMethod
 from schemas.cash_session_schema import CashSessionOpen, CashSessionClose, CashSessionResponse
 
 # obtener sesion abierta del usuario
-def get_open_session_by_user(db:Session, user_id: int):
-    return(
-        db.query(CashSession).filter(CashSession.user_id == user_id, CashSession.status == "open").first()
-        
+def get_open_session_by_user(db: Session, user_id: int):
+    return (
+        db.query(CashSession)
+        .filter(CashSession.user_id == user_id, CashSession.status == "OPEN")
+        .first()
+    )
+
+
+def get_open_session_for_update(db: Session, user_id: int):
+    """Sesión de caja abierta con bloqueo de fila para operaciones de venta."""
+    return (
+        db.query(CashSession)
+        .filter(CashSession.user_id == user_id, CashSession.status == "OPEN")
+        .with_for_update()
+        .first()
     )
 
 #abrir sesion de caja

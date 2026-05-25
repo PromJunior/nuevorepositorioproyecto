@@ -2,11 +2,17 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-DATA_URL = "mssql+pyodbc://oherasa:123456789@DESKTOP-Q4AGH5P\SQLEXPRESS/ventasdb?driver=ODBC+Driver+17+for+SQL+Server"
+from core.config import settings
 
-engine = create_engine(DATA_URL)
+_engine_kwargs = {}
+if settings.database_url.startswith("mssql"):
+    _engine_kwargs["pool_pre_ping"] = True
+    _engine_kwargs["fast_executemany"] = True
+
+engine = create_engine(settings.database_url, **_engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
 
 def get_db():
     db = SessionLocal()

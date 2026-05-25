@@ -4,8 +4,8 @@ from crud import user_crud
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-import bcrypt
 from fastapi import Depends, HTTPException, status
+from auth.password import verify_password, get_password_hash
 from fastapi.security import OAuth2PasswordBearer
 
 # Constantes centralizadas para evitar importes circulares
@@ -15,23 +15,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 400
 
 # Esquema de seguridad para Swagger
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-
-# === FUNCIONES DE ENCRIPTACIÓN CENTRALIZADAS ===
-
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    try:
-        return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
-    except Exception:
-        return False
-
-
-def get_password_hash(password: str) -> str:
-    """Genera el hash seguro de la contraseña usando bcrypt"""
-    pwd_bytes = password.encode('utf-8')
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(pwd_bytes, salt)
-    return hashed.decode('utf-8')
 
 
 # === GESTIÓN DE TOKENS JWT ===
@@ -97,6 +80,9 @@ def requiere_role(rol_name: str):
             )
         return current_user
     return role_checker
+
+
+require_role = requiere_role
 
 
 def get_current_admin_user(current_user=Depends(get_current_user)):
