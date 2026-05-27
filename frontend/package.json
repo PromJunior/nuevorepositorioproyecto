@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
     "@tailwindcss/vite": "^4.2.2",
+    "@tanstack/react-query": "^5.100.14",
     "axios": "^1.14.0",
     "framer-motion": "^12.38.0",
     "jspdf": "^4.2.1",
@@ -19,12 +21,15 @@
     "lucide-react": "^1.7.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-hook-form": "^7.76.1",
     "react-router-dom": "^7.13.2",
     "recharts": "^3.8.1",
     "sweetalert2": "^11.26.24",
     "sweetalert2-react-content": "^5.1.2",
     "tailwindcss": "^4.2.2",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
