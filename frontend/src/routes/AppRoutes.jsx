@@ -12,9 +12,9 @@ import { PublicRoute } from './PublicRoute';
 import { RoleRoute } from './RoleRoute';
 import { AdminRoute } from './AdminRoute';
 
-const Dashboard = lazy(() => import('../pages/dashboard'));
-const Sales = lazy(() => import('../pages/sales'));
-const Inventory = lazy(() => import('../pages/Inventory'));
+const Dashboard = lazy(() => import('../modules/dashboard/pages/DashboardPage'));
+const Sales = lazy(() => import('../modules/sales/pages/SalesPage'));
+const Inventory = lazy(() => import('../modules/inventory/pages/InventoryPage'));
 const Orders = lazy(() => import('../modules/orders/pages/OrdersPage'));
 const CashClosing = lazy(() => import('../modules/cash-session/page/CashSessionPage'));
 const SaaSGridModule = lazy(() => import('../components/SaaSGrid').then((module) => ({ default: module.SaaSGrid })));
