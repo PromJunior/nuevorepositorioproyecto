@@ -1,68 +1,62 @@
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Save, AlertCircle } from 'lucide-react';
+import { productSchema } from '../schemas/productSchema';
 
-// Esquema de validación estricto con Zod
-const productSchema = z.object({
-    name_product: z.string().min(2, { message: 'El nombre debe tener al menos 2 caracteres.' }),
-    price: z.coerce.number().positive({ message: 'El precio debe ser mayor a 0.' }),
-    stock: z.coerce.number().int().nonnegative({ message: 'El stock no puede ser negativo.' }),
-    category_id: z.coerce.number().int().positive({ message: 'Selecciona una categoría válida.' }),
-    description: z.string().optional(),
-    stockProduct: z.boolean().default(true),
-});
+const MotionDiv = motion.div;
 
-export const ProductModal = ({ isOpen, onClose, onSubmit, categories, productToEdit = null }) => {
+export const ProductModal = ({ isOpen, onClose, onSubmit, categories = [], productToEdit = null, isSaving = false }) => {
     const isEditMode = !!productToEdit;
 
-    // React Hook Form integrado con el validador Zod
     const {
         register,
         handleSubmit,
         reset,
-        formState: { errors, isSubmitting }
+        formState: { errors, isSubmitting },
     } = useForm({
         resolver: zodResolver(productSchema),
         defaultValues: {
             name_product: '',
-            price: 0,
+            price: '',
             stock: 0,
             category_id: '',
             description: '',
             stockProduct: true,
-        }
+        },
     });
 
-    // Resetear formulario con los datos a editar cuando el modal se abre
     useEffect(() => {
-        if (isOpen) {
-            if (productToEdit) {
-                reset({
-                    name_product: productToEdit.name_product || '',
-                    price: parseFloat(productToEdit.price) || 0,
-                    stock: parseInt(productToEdit.stock) || 0,
-                    category_id: productToEdit.category_id || '',
-                    description: productToEdit.description || '',
-                    stockProduct: productToEdit.stockProduct !== false,
-                });
-            } else {
-                reset({
-                    name_product: '',
-                    price: '',
-                    stock: 0,
-                    category_id: '',
-                    description: '',
-                    stockProduct: true,
-                });
-            }
+        if (!isOpen) return;
+
+        if (productToEdit) {
+            reset({
+                name_product: productToEdit.name_product || '',
+                price: Number(productToEdit.price) || 0,
+                stock: Number(productToEdit.stock) || 0,
+                category_id: productToEdit.category_id || '',
+                description: productToEdit.description || '',
+                stockProduct: productToEdit.stockProduct !== false,
+            });
+            return;
         }
+
+        reset({
+            name_product: '',
+            price: '',
+            stock: 0,
+            category_id: '',
+            description: '',
+            stockProduct: true,
+        });
     }, [isOpen, productToEdit, reset]);
 
     const handleFormSubmit = async (data) => {
-        await onSubmit(data);
+        await onSubmit({
+            ...data,
+            stock: isEditMode ? Number(productToEdit.stock || 0) : data.stock,
+        });
         onClose();
     };
 
@@ -70,104 +64,92 @@ export const ProductModal = ({ isOpen, onClose, onSubmit, categories, productToE
         <AnimatePresence>
             {isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm select-none">
-                    
-                    {/* Backdrop click to close */}
-                    <div className="absolute inset-0 cursor-default" onClick={onClose}></div>
+                    <button type="button" aria-label="Cerrar modal" className="absolute inset-0 cursor-default" onClick={onClose} />
 
-                    {/* Contenedor Animado del Modal */}
-                    <motion.div
+                    <MotionDiv
                         initial={{ opacity: 0, scale: 0.95, y: 15 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.95, y: 10 }}
                         transition={{ duration: 0.25, ease: 'easeOut' }}
-                        className="relative w-full max-w-md bg-white border border-slate-200 rounded-3xl shadow-2xl p-6 overflow-hidden z-10 flex flex-col gap-5 max-h-[90vh] font-sans"
+                        className="relative z-10 flex max-h-[90vh] w-full max-w-md flex-col gap-5 overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 font-sans shadow-2xl"
                     >
-                        {/* Header con botón de cerrar */}
                         <header className="flex items-center justify-between border-b border-slate-100 pb-3">
-                            <h2 className="text-lg font-black text-slate-800 tracking-tight">
-                                {isEditMode ? 'Ficha de Producto' : 'Crear Nuevo Producto'}
+                            <h2 className="text-lg font-black tracking-tight text-slate-800">
+                                {isEditMode ? 'Ficha de producto' : 'Crear nuevo producto'}
                             </h2>
-                            <button 
-                                onClick={onClose} 
-                                className="p-1.5 hover:bg-slate-100 text-slate-400 hover:text-slate-700 rounded-xl transition-all outline-none"
-                            >
+                            <button type="button" onClick={onClose} className="rounded-xl p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
                                 <X size={18} />
                             </button>
                         </header>
 
-                        {/* Formulario Reactivo */}
                         <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-4 overflow-y-auto pr-1">
-                            
-                            {/* Input: Nombre */}
                             <div className="space-y-1.5">
-                                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Nombre del Producto</label>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Nombre del producto</label>
                                 <input
                                     type="text"
-                                    placeholder="Ej. Computadora de Escritorio"
+                                    placeholder="Ej. Computadora de escritorio"
                                     {...register('name_product')}
-                                    className={`w-full px-4 py-2.5 rounded-xl border bg-slate-50 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all duration-200 ${
+                                    className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-800 outline-none transition focus:bg-white focus:ring-4 focus:ring-blue-600/10 ${
                                         errors.name_product ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-blue-600'
                                     }`}
                                 />
                                 {errors.name_product && (
-                                    <span className="flex items-center gap-1.5 text-xs text-red-500 font-semibold mt-1">
+                                    <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-red-500">
                                         <AlertCircle size={13} /> {errors.name_product.message}
                                     </span>
                                 )}
                             </div>
 
-                            {/* Fila: Precio y Stock */}
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1.5">
-                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Precio ($)</label>
+                                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Precio ($)</label>
                                     <input
                                         type="number"
                                         step="0.01"
                                         placeholder="0.00"
                                         {...register('price')}
-                                        className={`w-full px-4 py-2.5 rounded-xl border bg-slate-50 text-sm font-bold text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all duration-200 ${
+                                        className={`w-full rounded-xl border bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-800 outline-none transition focus:bg-white focus:ring-4 focus:ring-blue-600/10 ${
                                             errors.price ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-blue-600'
                                         }`}
                                     />
                                     {errors.price && (
-                                        <span className="flex items-center gap-1.5 text-xs text-red-500 font-semibold mt-1">
+                                        <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-red-500">
                                             <AlertCircle size={13} /> {errors.price.message}
                                         </span>
                                     )}
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Stock</label>
+                                    <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Stock</label>
                                     <input
                                         type="number"
+                                        readOnly={isEditMode}
                                         {...register('stock')}
-                                        disabled={isEditMode}
-                                        className={`w-full px-4 py-2.5 rounded-xl border text-sm font-bold placeholder-slate-400 outline-none transition-all duration-200 ${
-                                            isEditMode 
-                                                ? 'bg-slate-100 border-slate-100 text-slate-400 cursor-not-allowed' 
+                                        className={`w-full rounded-xl border px-4 py-2.5 text-sm font-bold outline-none transition ${
+                                            isEditMode
+                                                ? 'cursor-not-allowed border-slate-100 bg-slate-100 text-slate-400'
                                                 : `bg-slate-50 text-slate-800 focus:bg-white focus:ring-4 focus:ring-blue-600/10 ${
                                                     errors.stock ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-blue-600'
                                                 }`
                                         }`}
                                     />
                                     {errors.stock && (
-                                        <span className="flex items-center gap-1.5 text-xs text-red-500 font-semibold mt-1">
+                                        <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-red-500">
                                             <AlertCircle size={13} /> {errors.stock.message}
                                         </span>
                                     )}
                                 </div>
                             </div>
 
-                            {/* Input: Categoría */}
                             <div className="space-y-1.5">
-                                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Categoría</label>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Categoria</label>
                                 <select
                                     {...register('category_id')}
-                                    className={`w-full px-3 py-2.5 rounded-xl border bg-slate-50 text-sm font-semibold text-slate-700 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all duration-200 ${
+                                    className={`w-full rounded-xl border bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-700 outline-none transition focus:bg-white focus:ring-4 focus:ring-blue-600/10 ${
                                         errors.category_id ? 'border-red-500 focus:border-red-500' : 'border-slate-200 focus:border-blue-600'
                                     }`}
                                 >
-                                    <option value="">Seleccione una categoría</option>
+                                    <option value="">Seleccione una categoria</option>
                                     {categories.map((cat) => (
                                         <option key={cat.id} value={cat.id}>
                                             {cat.name_category}
@@ -175,59 +157,48 @@ export const ProductModal = ({ isOpen, onClose, onSubmit, categories, productToE
                                     ))}
                                 </select>
                                 {errors.category_id && (
-                                    <span className="flex items-center gap-1.5 text-xs text-red-500 font-semibold mt-1">
+                                    <span className="mt-1 flex items-center gap-1.5 text-xs font-semibold text-red-500">
                                         <AlertCircle size={13} /> {errors.category_id.message}
                                     </span>
                                 )}
                             </div>
 
-                            {/* Input: Descripción */}
                             <div className="space-y-1.5">
-                                <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider">Detalles / Descripción</label>
+                                <label className="block text-[11px] font-bold uppercase tracking-wider text-slate-400">Detalles / descripcion</label>
                                 <textarea
                                     rows="2"
-                                    placeholder="Descripción adicional del artículo..."
+                                    placeholder="Descripcion adicional del articulo..."
                                     {...register('description')}
-                                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:ring-4 focus:ring-blue-600/10 outline-none transition-all duration-200 resize-none"
+                                    className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-medium text-slate-800 outline-none transition focus:bg-white focus:ring-4 focus:ring-blue-600/10"
                                 />
                             </div>
 
-                            {/* Toggle: Disponibilidad comercial */}
-                            <div className="flex items-center justify-between p-3.5 bg-slate-50 border border-slate-200/60 rounded-2xl select-none">
+                            <div className="flex items-center justify-between rounded-2xl border border-slate-200/60 bg-slate-50 p-3.5">
                                 <div className="space-y-0.5">
-                                    <span className="font-bold text-xs text-slate-700 block">Habilitar Disponibilidad</span>
-                                    <span className="text-[10px] text-slate-400 font-medium">Permitir la comercialización inmediata</span>
+                                    <span className="block text-xs font-bold text-slate-700">Habilitar disponibilidad</span>
+                                    <span className="text-[10px] font-medium text-slate-400">Permitir la comercializacion inmediata</span>
                                 </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        {...register('stockProduct')}
-                                        className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                <label className="relative inline-flex cursor-pointer items-center">
+                                    <input type="checkbox" {...register('stockProduct')} className="peer sr-only" />
+                                    <div className="h-6 w-11 rounded-full bg-slate-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white"></div>
                                 </label>
                             </div>
 
-                            {/* Botonera de Envío */}
-                            <footer className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
-                                <button
-                                    type="button"
-                                    onClick={onClose}
-                                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl active:scale-[0.98] outline-none transition-all text-xs"
-                                >
+                            <footer className="mt-6 flex items-center justify-end gap-3 border-t border-slate-100 pt-4">
+                                <button type="button" onClick={onClose} className="rounded-xl bg-slate-100 px-4 py-2.5 text-xs font-bold text-slate-700 transition hover:bg-slate-200">
                                     Cancelar
                                 </button>
                                 <button
                                     type="submit"
-                                    disabled={isSubmitting}
-                                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg shadow-blue-600/10 active:scale-[0.98] outline-none transition-all text-xs flex items-center gap-2"
+                                    disabled={isSubmitting || isSaving}
+                                    className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-blue-600/10 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     <Save size={14} />
-                                    {isSubmitting ? 'Guardando...' : (isEditMode ? 'Guardar Cambios' : 'Registrar Producto')}
+                                    {isSubmitting || isSaving ? 'Guardando...' : (isEditMode ? 'Guardar cambios' : 'Registrar producto')}
                                 </button>
                             </footer>
                         </form>
-                    </motion.div>
+                    </MotionDiv>
                 </div>
             )}
         </AnimatePresence>
