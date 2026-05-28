@@ -1,14 +1,15 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Login from './pages/Login';
+import Login from './modules/auth/pages/LoginPage';
 import Dashboard from './pages/dashboard';
 import Inventory from './pages/Inventory';
 import Sales from './pages/sales';
-import Orders from './pages/orders';
-import CashClosing from './pages/cashClosing';
+import Orders from './modules/orders/pages/OrdersPage';
+import CashClosing from './modules/cash-session/page/CashSessionPage';
 import MainLayout from './layouts/MainLayout/MainLayout';
-import ProtectedRouter from './components/ProtectedRouter';
+import ProtectedRouter from './core/guards/ProtectedRouter';
 import { SaaSGrid } from './components/SaaSGrid';
+
 
 function App() {
   return (

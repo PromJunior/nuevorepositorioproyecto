@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
-import inventoryApi from '../api/inventoryApi';
+import inventoryApi from '../../../api/inventoryApi';
 
 const MySwal = withReactContent(Swal);
 

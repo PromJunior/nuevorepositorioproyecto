@@ -9,7 +9,7 @@ import {
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import { jwtDecode } from 'jwt-decode';
-import inventoryApi from '../api/inventoryApi';
+import inventoryApi from '../../../api/inventoryApi';
 
 // Librerías para exportar
 import { jsPDF } from 'jspdf';

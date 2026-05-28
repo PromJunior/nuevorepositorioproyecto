@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogIn, User, Lock, Sparkles,ShieldCheck } from 'lucide-react';
+import { LogIn, User, Lock, Sparkles, ShieldCheck } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { jwtDecode } from 'jwt-decode'; // - Importación necesaria
-import api from '../api/axios';
+import { useAuthStore } from '../../../shared/store/useAuthStore';
+import { authService } from '../services/authService';
 
 const Login = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const setAuth = useAuthStore((state) => state.setAuth);
     const navigate = useNavigate();
 
     const handleLogin = async (e) => {
@@ -22,22 +23,14 @@ const Login = () => {
         setLoading(true);
         
         try {
-            const params = new URLSearchParams();
-            params.append('username', username);
-            params.append('password', password);
+            const data = await authService.login(username, password);
+            const { access_token } = data;
 
-            const response = await api.post('/token', params, {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded'
-                }
-            });
-
-            const { access_token } = response.data;
-            localStorage.setItem('token', access_token);
+            // Inyectamos las credenciales y decodificamos el rol en Zustand
+            setAuth(access_token);
             
-            // --- LÓGICA DE REDIRECCIÓN POR ROLES ---
-            const decoded = jwtDecode(access_token); // - Decodificamos el token
-            const userRole = decoded.role; // Obtenemos el rol (ej: 'admin' o 'vendedor')
+            // Obtenemos el rol resultante de la tienda Zustand
+            const userRole = useAuthStore.getState().role;
 
             Swal.fire({
                 icon: 'success',
@@ -47,7 +40,7 @@ const Login = () => {
                 showConfirmButton: false
             });
 
-            // - Redirección inteligente basada en la planificación
+            // Redirección inteligente basada en rol
             if (userRole === 'admin') {
                 navigate('/'); // Administrador va al Dashboard
             } else if (userRole === 'vendedor') {
@@ -67,6 +60,7 @@ const Login = () => {
             setLoading(false);
         }
     };
+
 
 
     return (
