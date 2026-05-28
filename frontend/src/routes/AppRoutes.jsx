@@ -1,25 +1,36 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import Dashboard from '../pages/dashboard';
-import Inventory from '../pages/Inventory';
-import Sales from '../pages/sales';
-import Orders from '../modules/orders/pages/OrdersPage';
-import CashClosing from '../modules/cash-session/page/CashSessionPage';
-import { SaaSGrid } from '../components/SaaSGrid';
-import { LoginPage } from '../modules/auth/pages/LoginPage';
-import { DashboardLayout } from '../layouts/DashboardLayout/DashboardLayout';
 import { AuthLayout } from '../layouts/AuthLayout/AuthLayout';
+import { DashboardLayout } from '../layouts/DashboardLayout/DashboardLayout';
+import { LoginPage } from '../modules/auth/pages/LoginPage';
+import { EmptyState } from '../shared/components/EmptyState';
+import { Loader } from '../shared/components/Loader';
+import { ModulePlaceholder } from '../shared/components/ModulePlaceholder';
+import { PROTECTED_ROLES, ROUTE_PERMISSIONS, ROUTES } from '../constants/routes';
 import { PrivateRoute } from './PrivateRoute';
 import { PublicRoute } from './PublicRoute';
 import { RoleRoute } from './RoleRoute';
-import { APP_ROLES, PROTECTED_ROLES, ROUTES } from '../constants/routes';
+import { AdminRoute } from './AdminRoute';
+
+const Dashboard = lazy(() => import('../pages/dashboard'));
+const Sales = lazy(() => import('../pages/sales'));
+const Inventory = lazy(() => import('../pages/Inventory'));
+const Orders = lazy(() => import('../modules/orders/pages/OrdersPage'));
+const CashClosing = lazy(() => import('../modules/cash-session/page/CashSessionPage'));
+const SaaSGridModule = lazy(() => import('../components/SaaSGrid').then((module) => ({ default: module.SaaSGrid })));
+
+const LazyPage = ({ children }) => (
+    <Suspense fallback={<Loader label="Cargando modulo..." className="min-h-[60vh]" />}>
+        {children}
+    </Suspense>
+);
 
 const UnauthorizedPage = () => (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-6">
-        <div className="max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-            <h1 className="text-xl font-black text-slate-900">Acceso no autorizado</h1>
-            <p className="mt-2 text-sm font-medium text-slate-500">Tu usuario no tiene permisos para ver esta seccion.</p>
-        </div>
+    <div className="p-6">
+        <EmptyState
+            title="Acceso no autorizado"
+            description="Tu usuario no tiene permisos para ver esta seccion del ERP."
+        />
     </div>
 );
 
@@ -37,16 +48,57 @@ export const AppRoutes = () => {
 
                 <Route element={<RoleRoute allowedRoles={PROTECTED_ROLES} />}>
                     <Route element={<DashboardLayout />}>
-                        <Route index element={<Dashboard />} />
-                        <Route path="ventas" element={<Sales />} />
-                        <Route path="detalle" element={<Orders />} />
-                        <Route path="cierre" element={<CashClosing />} />
-                        <Route path="features" element={<SaaSGrid />} />
-                        <Route path="inventario" element={<Inventory />} />
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.app]} />}>
+                            <Route index element={<LazyPage><Dashboard /></LazyPage>} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.sales]} />}>
+                            <Route path="ventas" element={<LazyPage><Sales /></LazyPage>} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.inventory]} />}>
+                            <Route path="inventario" element={<LazyPage><Inventory /></LazyPage>} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.purchases]} />}>
+                            <Route path="compras" element={<ModulePlaceholder title="Compras" description="Base de navegacion preparada para compras." />} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.clients]} />}>
+                            <Route path="clientes" element={<ModulePlaceholder title="Clientes" description="Base de navegacion preparada para clientes." />} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.suppliers]} />}>
+                            <Route path="proveedores" element={<ModulePlaceholder title="Proveedores" description="Base de navegacion preparada para proveedores." />} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.cashClosing]} />}>
+                            <Route path="cierre" element={<LazyPage><CashClosing /></LazyPage>} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.kardex]} />}>
+                            <Route path="kardex" element={<ModulePlaceholder title="Kardex" description="Base de navegacion preparada para movimientos de inventario." />} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.reports]} />}>
+                            <Route path="reportes" element={<ModulePlaceholder title="Reportes" description="Base de navegacion preparada para reporteria ERP." />} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.users]} />}>
+                            <Route path="usuarios" element={<ModulePlaceholder title="Usuarios" description="Base de navegacion preparada para administracion de usuarios." />} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.orders]} />}>
+                            <Route path="detalle" element={<LazyPage><Orders /></LazyPage>} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.features]} />}>
+                            <Route path="features" element={<LazyPage><SaaSGridModule /></LazyPage>} />
+                        </Route>
                     </Route>
                 </Route>
 
-                <Route element={<RoleRoute allowedRoles={[APP_ROLES.admin]} />}>
+                <Route element={<AdminRoute />}>
                     <Route path="admin" element={<Navigate to={ROUTES.app} replace />} />
                 </Route>
             </Route>

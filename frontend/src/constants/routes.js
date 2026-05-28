@@ -4,8 +4,14 @@ export const ROUTES = {
     app: '/',
     sales: '/ventas',
     inventory: '/inventario',
+    purchases: '/compras',
+    clients: '/clientes',
+    suppliers: '/proveedores',
     orders: '/detalle',
     cashClosing: '/cierre',
+    kardex: '/kardex',
+    reports: '/reportes',
+    users: '/usuarios',
     features: '/features',
 };
 
@@ -15,3 +21,18 @@ export const APP_ROLES = {
 };
 
 export const PROTECTED_ROLES = [APP_ROLES.admin, APP_ROLES.seller];
+
+export const ROUTE_PERMISSIONS = {
+    [ROUTES.app]: [APP_ROLES.admin],
+    [ROUTES.sales]: [APP_ROLES.admin, APP_ROLES.seller],
+    [ROUTES.inventory]: [APP_ROLES.admin],
+    [ROUTES.purchases]: [APP_ROLES.admin],
+    [ROUTES.clients]: [APP_ROLES.admin, APP_ROLES.seller],
+    [ROUTES.suppliers]: [APP_ROLES.admin],
+    [ROUTES.cashClosing]: [APP_ROLES.admin, APP_ROLES.seller],
+    [ROUTES.kardex]: [APP_ROLES.admin],
+    [ROUTES.reports]: [APP_ROLES.admin],
+    [ROUTES.users]: [APP_ROLES.admin],
+    [ROUTES.orders]: [APP_ROLES.admin, APP_ROLES.seller],
+    [ROUTES.features]: [APP_ROLES.admin],
+};

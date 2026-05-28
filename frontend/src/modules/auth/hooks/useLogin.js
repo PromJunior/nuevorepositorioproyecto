@@ -15,7 +15,8 @@ export const useLogin = () => {
             const token = data.access_token;
             login({ token });
 
-            const redirectTo = location.state?.from?.pathname || ROUTES.app;
+            const defaultRoute = useAuthStore.getState().getDefaultRoute() || ROUTES.app;
+            const redirectTo = location.state?.from?.pathname || defaultRoute;
             navigate(redirectTo, { replace: true });
         },
     });

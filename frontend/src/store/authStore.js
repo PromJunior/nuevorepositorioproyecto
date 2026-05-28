@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { APP_ROLES, ROUTE_PERMISSIONS, ROUTES } from '../constants/routes';
 import { env } from '../config/env';
 import { getUserFromToken, isTokenExpired } from '../utils/jwt';
 
@@ -12,6 +13,20 @@ const syncLegacyToken = (token) => {
     localStorage.removeItem(env.legacyTokenKey);
 };
 
+const getPermissionsForRole = (role) => {
+    if (!role) return [];
+    if (role === APP_ROLES.admin) return Object.keys(ROUTE_PERMISSIONS);
+
+    return Object.entries(ROUTE_PERMISSIONS)
+        .filter(([, roles]) => roles.includes(role))
+        .map(([route]) => route);
+};
+
+const getDefaultRouteForRole = (role) => {
+    if (role === APP_ROLES.seller) return ROUTES.sales;
+    return ROUTES.app;
+};
+
 export const useAuthStore = create(
     persist(
         (set, get) => ({
@@ -19,6 +34,8 @@ export const useAuthStore = create(
             refreshToken: null,
             user: null,
             role: null,
+            permissions: [],
+            loading: false,
             status: 'idle',
 
             login: ({ token, refreshToken = null, user = null }) => {
@@ -33,6 +50,8 @@ export const useAuthStore = create(
                     refreshToken,
                     user: nextUser,
                     role: nextRole,
+                    permissions: getPermissionsForRole(nextRole),
+                    loading: false,
                     status: 'authenticated',
                 });
             },
@@ -45,9 +64,13 @@ export const useAuthStore = create(
                     refreshToken: null,
                     user: null,
                     role: null,
+                    permissions: [],
+                    loading: false,
                     status: 'anonymous',
                 });
             },
+
+            setLoading: (loading) => set({ loading }),
 
             hydrateFromToken: () => {
                 const stateToken = get().token;
@@ -66,6 +89,8 @@ export const useAuthStore = create(
                     token,
                     user: get().user || tokenUser,
                     role: get().role || tokenUser?.role || null,
+                    permissions: getPermissionsForRole(get().role || tokenUser?.role || null),
+                    loading: false,
                     status: 'authenticated',
                 });
 
@@ -86,6 +111,27 @@ export const useAuthStore = create(
                 return roles.map((role) => role.toLowerCase()).includes(currentRole.toLowerCase());
             },
 
+            isAdmin: () => get().role === APP_ROLES.admin,
+
+            can: (permissionOrRoles) => {
+                if (!permissionOrRoles) return true;
+
+                const role = get().role;
+                if (role === APP_ROLES.admin) return true;
+
+                if (Array.isArray(permissionOrRoles)) {
+                    return get().hasRole(permissionOrRoles);
+                }
+
+                if (ROUTE_PERMISSIONS[permissionOrRoles]) {
+                    return get().permissions.includes(permissionOrRoles);
+                }
+
+                return get().hasRole(permissionOrRoles);
+            },
+
+            getDefaultRoute: () => getDefaultRouteForRole(get().role),
+
             setAuth: (token, user = null) => get().login({ token, user }),
             clearAuth: () => get().logout(),
         }),
@@ -96,6 +142,7 @@ export const useAuthStore = create(
                 refreshToken: state.refreshToken,
                 user: state.user,
                 role: state.role,
+                permissions: state.permissions,
                 status: state.status,
             }),
             onRehydrateStorage: () => (state) => {
