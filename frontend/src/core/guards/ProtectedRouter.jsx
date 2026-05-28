@@ -1,37 +1,24 @@
+import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { jwtDecode } from 'jwt-decode';
+import { ROUTES } from '../../constants/routes';
+import { useAuthStore } from '../../store/authStore';
 
-const ProtectedRouter = ({allowedRoles}) => {
-    const token = localStorage.getItem('token');
+const ProtectedRouter = ({ allowedRoles }) => {
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+    const hydrateFromToken = useAuthStore((state) => state.hydrateFromToken);
+    const hasRole = useAuthStore((state) => state.hasRole);
 
-    if (!token) {
-        // No hay token, redirigimos al login
-        return <Navigate to="/login" replace />;
+    const canAccess = isAuthenticated() || hydrateFromToken();
+
+    if (!canAccess) {
+        return <Navigate to={ROUTES.login} replace />;
     }
 
-    try {
-        // Verificamos si el token ha expirado
-        const decodedToken = jwtDecode(token);
-        //const userRole = decodedToken.role; // Asegúrate de que tu token incluya el rol del usuario
-        const currentTime = Date.now() / 1000;
-
-        if (decodedToken.exp < currentTime) {
-            // El token expiró
-            localStorage.removeItem('token');
-            return <Navigate to="/login" replace />;
-        }
-        if (allowedRoles && !allowedRoles.includes(decodedToken.role)){
-            return <Navigate to="/unauthorized" replace />;
-        }
-
-        // El token es válido, permitimos el acceso a las rutas hijas
-        return <Outlet />;
-    } catch (error) {
-        // Error al decodificar el token (token inválido)
-        console.error('Error al decodificar el token:', error);
-        localStorage.removeItem('token');
-        return <Navigate to="/login" replace />;
+    if (allowedRoles && !hasRole(allowedRoles)) {
+        return <Navigate to={ROUTES.unauthorized} replace />;
     }
+
+    return <Outlet />;
 };
 
 export default ProtectedRouter;
