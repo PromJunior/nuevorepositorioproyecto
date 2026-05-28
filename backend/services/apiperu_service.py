@@ -17,6 +17,7 @@ class ApiPeruRequestError(Exception):
 
 async def consult_dni_apiperu (dni:str ) -> dict[str,Any]:
     token = settings.apiperu_token
+    print("TOKEN:", settings.apiperu_token)
 
     if not token:
         raise ApiPeruConfigError("configura tu token dentro del archivo .env")
@@ -30,8 +31,11 @@ async def consult_dni_apiperu (dni:str ) -> dict[str,Any]:
                          "Content-Type": "application/json"},
                 timeout=10.0,
             )
+            print("STATUS CODE:", response.status_code)
+            print("RESPONSE BODY:", response.text)
         except httpx.RequestError as exc:
             raise ApiPeruRequestError(f"Error de conexion con ApiPeru: {exc}") from exc
+            
     
     if response.status_code in (403, 401):
         raise ApiPeruRequestError("Token de autenticacion invalido o expirado")
