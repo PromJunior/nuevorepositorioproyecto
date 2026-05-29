@@ -22,6 +22,7 @@ class DashboardSummary(BaseModel):
     low_stock_count: int
     # Entidades
     total_clients: int
+    clients_new_this_month: int
     total_suppliers: int
     # Caja
     has_open_session: bool

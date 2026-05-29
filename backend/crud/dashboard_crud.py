@@ -83,6 +83,12 @@ def get_dashboard_summary(db: Session) -> dict:
 
     # ─ Clientes y proveedores
     total_clients = db.query(func.count(Client.id)).scalar() or 0
+    clients_new_this_month = (
+        db.query(func.count(Client.id))
+        .filter(Client.create_at >= month_start)
+        .scalar()
+        or 0
+    )
     total_suppliers = db.query(func.count(Supplier.id)).scalar() or 0
 
     # ─ Sesión de caja activa
@@ -115,6 +121,7 @@ def get_dashboard_summary(db: Session) -> dict:
         "total_products": inv["total_products"],
         "low_stock_count": inv["low_stock_count"],
         "total_clients": total_clients,
+        "clients_new_this_month": clients_new_this_month,
         "total_suppliers": total_suppliers,
         "has_open_session": has_open,
         "open_session_expected": open_expected,

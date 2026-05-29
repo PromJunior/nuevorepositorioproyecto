@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -6,11 +6,30 @@ from database.database import get_db
 from auth.security import get_current_user, require_role
 from models.model import User
 from schemas.order_schema import OrderCreate, OrderResponse, OrderUpdate
-from schemas.client_schema import ClientCreate, ClientResponse, DniResponse
+from schemas.client_schema import (
+    ClientCreate,
+    ClientCrmSummary,
+    ClientPurchaseHistoryResponse,
+    ClientResponse,
+    ClientStats,
+    ClientUpdate,
+    DniResponse,
+)
 from schemas.payment_method_schema import PaymentMethodResponse
 from services.sales_service import SalesService
 from services.apiperu_service import ApiPeruConfigError, ApiPeruRequestError, consult_dni_apiperu
-from crud.client_crud import create_client, get_client_by_dni, get_client_by_email, get_clients
+from crud.client_crud import (
+    create_client,
+    deactivate_client,
+    get_client_by_dni,
+    get_client_by_email,
+    get_client_by_id,
+    get_client_purchase_history,
+    get_client_stats,
+    get_clients_crm_summary,
+    get_clients,
+    update_client,
+)
 from crud.payment_crud import get_payment_method
 from crud import order_crud
 
@@ -50,8 +69,14 @@ def get_sales_report_db(db: Session = Depends(get_db), current_user: User = Depe
 #-----------------------> endpoints de los clientes <------------------------
 
 @router.get("/clients/", response_model=List[ClientResponse])
-def get_clients_db(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    return get_clients(db=db, skip=skip, limit=limit)
+def get_clients_db(
+    skip: int = 0,
+    limit: int = 100,
+    include_inactive: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return get_clients(db=db, skip=skip, limit=limit, include_inactive=include_inactive)
 
 
 @router.get("/clients/dni/{dni}", response_model=DniResponse)
@@ -72,11 +97,19 @@ async def consult_client_dni(dni: str, db: Session = Depends(get_db), current_us
         apellido_materno=data.get("apellido_materno"),
         codigo_verificacion=data.get("codigo_verificacion"),
     )
-        
 
-@router.get("/clients/{dni}", response_model=ClientResponse)
-def get_client_db(dni: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+
+@router.get("/clients/dni-local/{dni}", response_model=ClientResponse)
+def get_client_by_dni_db(dni: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     db_client = get_client_by_dni(db=db, dni=dni)
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    return db_client
+
+
+@router.get("/clients/{client_id}", response_model=ClientResponse)
+def get_client_db(client_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    db_client = get_client_by_id(db=db, client_id=client_id)
     if not db_client:
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
     return db_client
@@ -91,6 +124,62 @@ def create_client_db(client: ClientCreate, db: Session = Depends(get_db), curren
         raise HTTPException(status_code=400, detail="Ya existe un cliente con este email")
 
     return create_client(db=db, client_data=client)
+
+
+@router.get("/clients/stats/summary", response_model=ClientCrmSummary)
+def get_clients_summary_db(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return get_clients_crm_summary(db=db)
+
+
+@router.put("/clients/{client_id}", response_model=ClientResponse)
+def update_client_db(
+    client_id: int,
+    client: ClientUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
+    existing = get_client_by_id(db=db, client_id=client_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
+    if client.email and client.email != existing.email:
+        email_owner = get_client_by_email(db=db, email=client.email)
+        if email_owner and email_owner.id != client_id:
+            raise HTTPException(status_code=400, detail="Ya existe un cliente con este email")
+
+    return update_client(db=db, client_id=client_id, client_data=client)
+
+
+@router.delete("/clients/{client_id}", response_model=ClientResponse)
+def deactivate_client_db(
+    client_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role("admin")),
+):
+    db_client = deactivate_client(db=db, client_id=client_id)
+    if not db_client:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    return db_client
+
+
+@router.get("/clients/{client_id}/stats", response_model=ClientStats)
+def get_client_stats_db(client_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if not get_client_by_id(db=db, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    return get_client_stats(db=db, client_id=client_id)
+
+
+@router.get("/clients/{client_id}/purchase-history", response_model=ClientPurchaseHistoryResponse)
+def get_client_purchase_history_db(
+    client_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not get_client_by_id(db=db, client_id=client_id):
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+    return get_client_purchase_history(db=db, client_id=client_id, skip=skip, limit=limit)
 
 
 @router.get("/payment_methods/", response_model=list[PaymentMethodResponse])

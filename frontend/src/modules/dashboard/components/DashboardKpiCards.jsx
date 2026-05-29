@@ -94,7 +94,7 @@ export const DashboardKpiCards = ({ summary }) => {
                 icon={Users}
                 label="Clientes registrados"
                 value={formatNumber(summary.total_clients)}
-                sub="En base de datos"
+                sub={`${formatNumber(summary.clients_new_this_month)} nuevos este mes`}
                 tone="slate"
             />
             <KpiCard

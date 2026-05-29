@@ -5,7 +5,6 @@ import { DashboardLayout } from '../layouts/DashboardLayout/DashboardLayout';
 import { LoginPage } from '../modules/auth/pages/LoginPage';
 import { EmptyState } from '../shared/components/EmptyState';
 import { Loader } from '../shared/components/Loader';
-import { ModulePlaceholder } from '../shared/components/ModulePlaceholder';
 import { PROTECTED_ROLES, ROUTE_PERMISSIONS, ROUTES } from '../constants/routes';
 import { PrivateRoute } from './PrivateRoute';
 import { PublicRoute } from './PublicRoute';
@@ -23,6 +22,8 @@ const PurchasesPage = lazy(() => import('../modules/purchases/pages/PurchasesPag
 const PurchaseFormPage = lazy(() => import('../modules/purchases/pages/PurchaseFormPage'));
 const PurchaseDetailPage = lazy(() => import('../modules/purchases/pages/PurchaseDetailPage'));
 const SuppliersPage = lazy(() => import('../modules/suppliers/pages/SuppliersPage'));
+const ClientsPage = lazy(() => import('../modules/clients/pages/ClientsPage'));
+const ClientDetailPage = lazy(() => import('../modules/clients/pages/ClientDetailPage'));
 const ReportsPage = lazy(() => import('../modules/reports/pages/ReportsPage'));
 const UsersPage = lazy(() => import('../modules/users/pages/UsersPage'));
 const SaaSGridModule = lazy(() => import('../components/SaaSGrid').then((module) => ({ default: module.SaaSGrid })));
@@ -75,7 +76,8 @@ export const AppRoutes = () => {
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.clients]} />}>
-                            <Route path="clientes" element={<ModulePlaceholder title="Clientes" description="Base de navegacion preparada para clientes." />} />
+                            <Route path="clientes" element={<LazyPage><ClientsPage /></LazyPage>} />
+                            <Route path="clientes/:id" element={<LazyPage><ClientDetailPage /></LazyPage>} />
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.suppliers]} />}>
