@@ -23,6 +23,7 @@ const PurchasesPage = lazy(() => import('../modules/purchases/pages/PurchasesPag
 const PurchaseFormPage = lazy(() => import('../modules/purchases/pages/PurchaseFormPage'));
 const PurchaseDetailPage = lazy(() => import('../modules/purchases/pages/PurchaseDetailPage'));
 const SuppliersPage = lazy(() => import('../modules/suppliers/pages/SuppliersPage'));
+const ReportsPage = lazy(() => import('../modules/reports/pages/ReportsPage'));
 const SaaSGridModule = lazy(() => import('../components/SaaSGrid').then((module) => ({ default: module.SaaSGrid })));
 
 const LazyPage = ({ children }) => (
@@ -90,7 +91,7 @@ export const AppRoutes = () => {
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.reports]} />}>
-                            <Route path="reportes" element={<ModulePlaceholder title="Reportes" description="Base de navegacion preparada para reporteria ERP." />} />
+                            <Route path="reportes" element={<LazyPage><ReportsPage /></LazyPage>} />
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.users]} />}>

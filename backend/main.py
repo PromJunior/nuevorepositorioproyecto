@@ -40,10 +40,13 @@ def root():
     return {"message": "Bienvenido al sistema de ventas"}
 
 from database.seed import create_initial_admin, seed_purchase_statuses
-from database.database import SessionLocal
+from database.database import SessionLocal, Base, engine
+import models.model  # noqa: F401  — asegura que todos los modelos estén registrados
 
 @app.on_event("startup")
 def startup_event():
+    # Crea tablas nuevas (idempotente: no afecta las existentes)
+    Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
         create_initial_admin(db)

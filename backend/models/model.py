@@ -311,3 +311,20 @@ class Client(Base):
     
     # Relaciones existentes
     orders = relationship("Order", back_populates="client")
+
+
+#-----------------------> MODELO DE AUDITORÍA DEL SISTEMA <------------------------
+class AuditLog(Base):
+    """Registra acciones críticas del sistema para auditoría gerencial."""
+    __tablename__ = "audit_logs"
+
+    id = Column(Integer, autoincrement=True, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    module = Column(String(50), nullable=False)       # 'ventas', 'caja', 'compras', 'auth'
+    action = Column(String(50), nullable=False)        # 'LOGIN', 'CREATE', 'RECEIVE', 'CLOSE', etc.
+    entity = Column(String(50), nullable=True)         # 'Order', 'Purchase', 'CashSession'
+    entity_id = Column(Integer, nullable=True)
+    description = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", foreign_keys=[user_id])
