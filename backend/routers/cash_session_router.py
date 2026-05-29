@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from database.database import get_db
 from auth.security import get_current_user, require_role
@@ -45,14 +45,12 @@ def open_session(
 
 
 # ─── Obtener sesión activa del usuario actual ────────────────────────────────
-@router.get("/active", response_model=CashSessionResponse)
+@router.get("/active", response_model=Optional[CashSessionResponse])
 def get_active_session(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     session = get_open_session_by_user(db=db, user_id=current_user.id)
-    if not session:
-        raise HTTPException(status_code=404, detail="No hay sesión de caja abierta.")
     return session
 
 

@@ -65,8 +65,8 @@ export const SalesChart = () => {
             {isLoading ? (
                 <div className="h-48 animate-pulse rounded-xl bg-slate-100" />
             ) : (
-                <div className="h-48">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="h-48 min-h-48 w-full min-w-0">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                         <AreaChart data={formatted} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                             <defs>
                                 <linearGradient id="gradSales" x1="0" y1="0" x2="0" y2="1">

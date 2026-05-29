@@ -46,15 +46,7 @@ const SalesPage = () => {
     const paymentMethods = useMemo(() => paymentMethodsQuery.data || [], [paymentMethodsQuery.data]);
     const products = useMemo(() => productsQuery.data || [], [productsQuery.data]);
     const total = useMemo(() => items.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0), [items]);
-
-    useEffect(() => {
-        if (!selectedPaymentMethod && paymentMethods.length > 0) {
-            const timer = setTimeout(() => {
-                setSelectedPaymentMethod(paymentMethods[0].id);
-            }, 0);
-            return () => clearTimeout(timer);
-        }
-    }, [paymentMethods, selectedPaymentMethod]);
+    const effectivePaymentMethod = selectedPaymentMethod ?? paymentMethods[0]?.id ?? null;
 
     useEffect(() => {
         if (products.length > 0) syncStock(products);
@@ -157,7 +149,7 @@ const SalesPage = () => {
         try {
             await createSaleMutation.mutateAsync({
                 client_id: selectedClient.id,
-                payment_method_id: selectedPaymentMethod,
+                payment_method_id: effectivePaymentMethod,
                 items: items.map((item) => ({
                     product_id: item.product_id,
                     quantity: Number(item.quantity),
@@ -213,7 +205,7 @@ const SalesPage = () => {
                     items={items}
                     total={total}
                     paymentMethods={paymentMethods}
-                    selectedPaymentMethod={selectedPaymentMethod}
+                    selectedPaymentMethod={effectivePaymentMethod}
                     onPaymentMethodChange={setSelectedPaymentMethod}
                     selectedClient={selectedClient}
                     onQuantityChange={updateQuantity}
