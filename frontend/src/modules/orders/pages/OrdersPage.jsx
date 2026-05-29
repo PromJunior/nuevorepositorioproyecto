@@ -1,23 +1,20 @@
-import React, { useState, useEffect } from 'react';
-// eslint-disable-next-line no-unused-vars
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
     Calendar, FileText, Table as TableIcon, Eye, Printer,
     Trash2, Search, DollarSign, Receipt, TrendingUp,
-    AlertCircle, X, SlidersHorizontal, RefreshCw
+    X, SlidersHorizontal, RefreshCw
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
-import { jwtDecode } from 'jwt-decode';
-import inventoryApi from '../../../api/inventoryApi';
-
-// Librerías para exportar
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
-import * as XLSX from 'xlsx';
+import { useAuthStore } from '../../../shared/store/useAuthStore';
+import { orderService } from '../../../services/orderService';
 
 const MySwal = withReactContent(Swal);
+const MotionDiv = motion.div;
+const MotionTr = motion.tr;
 
 // ================= ORIENTACIÓN DE ANIMACIONES (Framer Motion) =================
 const containerVariants = {
@@ -38,8 +35,8 @@ const itemVariants = {
 };
 
 const Orders = () => {
-    const [orders, setOrders] = useState([]);
-    const [userRole, setUserRole] = useState(null);
+    const queryClient = useQueryClient();
+    const userRole = useAuthStore((state) => state.role);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [showModal, setShowModal] = useState(false);
 
@@ -52,29 +49,18 @@ const Orders = () => {
         minAmount: ""
     });
 
-    // ─── fetchOrders declarada antes de useEffect para evitar TDZ ────────────
-    const fetchOrders = async () => {
-        try {
-            const response = await inventoryApi.get('/order/');
-            setOrders(response.data);
-        } catch (_e) {
-            console.error("Error al cargar órdenes:", _e);
-        }
-    };
+    const ordersQuery = useQuery({
+        queryKey: ['orders'],
+        queryFn: orderService.getOrders,
+        staleTime: 1000 * 30,
+    });
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            try {
-                const decoded = jwtDecode(token);
-                setUserRole(decoded.role);
-            } catch (_e) {
-                // token inválido — ignorar
-            }
-        }
-        fetchOrders();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    const deleteOrderMutation = useMutation({
+        mutationFn: orderService.deleteOrder,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['orders'] }),
+    });
+
+    const orders = ordersQuery.data || [];
 
     // ─── Modal: abrir detalle ─────────────────────────────────────────────────
     const handleViewDetail = (order) => {
@@ -134,7 +120,8 @@ const Orders = () => {
     };
 
     // --- FUNCIONES DE EXPORTACIÓN ---
-    const exportToExcel = () => {
+    const exportToExcel = async () => {
+        const XLSX = await import('xlsx');
         const dataToExport = filteredOrders.map(order => ({
             ID: order.id,
             Fecha: new Date(order.order_date).toLocaleString(),
@@ -148,7 +135,9 @@ const Orders = () => {
         XLSX.writeFile(wb, `Reporte_Ventas_${new Date().toLocaleDateString()}.xlsx`);
     };
 
-    const exportToPDF = () => {
+    const exportToPDF = async () => {
+        const { jsPDF } = await import('jspdf');
+        await import('jspdf-autotable');
         const doc = new jsPDF();
         doc.text("Reporte de Ventas - SHOP PRO", 14, 15);
         const tableColumn = ["ID", "Fecha", "Cliente", "Método", "Total"];
@@ -202,10 +191,10 @@ const Orders = () => {
         });
         if (result.isConfirmed) {
             try {
-                await inventoryApi.delete(`/delete_order/${id}/`);
-                setOrders(orders.filter(order => order.id !== id));
+                await deleteOrderMutation.mutateAsync(id);
                 MySwal.fire({ title: 'Orden Anulada', icon: 'success', customClass: { popup: '!rounded-2xl' } });
-            } catch (_e) {
+            } catch (error) {
+                console.error("Error al anular orden:", error);
                 MySwal.fire({ title: 'Error', text: 'No se pudo procesar la anulación', icon: 'error', customClass: { popup: '!rounded-2xl' } });
             }
         }
@@ -375,7 +364,7 @@ const Orders = () => {
             </div>
 
             {/* TABLA DE ÓRDENES PREMIUM (REDISEÑO NO-CRUD) */}
-            <motion.div
+            <MotionDiv
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
@@ -401,7 +390,7 @@ const Orders = () => {
                                 </tr>
                             ) : (
                                 filteredOrders.map((order) => (
-                                    <motion.tr
+                                    <MotionTr
                                         key={order.id}
                                         variants={itemVariants}
                                         whileHover={{ backgroundColor: "rgba(248, 250, 252, 0.7)" }}
@@ -446,19 +435,19 @@ const Orders = () => {
                                                 )}
                                             </div>
                                         </td>
-                                    </motion.tr>
+                                    </MotionTr>
                                 ))
                             )}
                         </tbody>
                     </table>
                 </div>
-            </motion.div>
+            </MotionDiv>
 
             {/* MODAL DETALLE DE ORDEN CON ANIMACIÓN ANIDADA */}
             <AnimatePresence>
                 {showModal && selectedOrder && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={closeModal}>
-                        <motion.div
+                        <MotionDiv
                             initial={{ opacity: 0, scale: 0.96, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.98, y: 5 }}
@@ -516,7 +505,7 @@ const Orders = () => {
                                 <span className="text-slate-400 text-xs font-bold uppercase tracking-wider">Monto Total Liquidado</span>
                                 <span className="text-xl font-black text-slate-900 tracking-tight">$ {selectedOrder.total_amount.toFixed(2)}</span>
                             </footer>
-                        </motion.div>
+                        </MotionDiv>
                     </div>
                 )}
             </AnimatePresence>
