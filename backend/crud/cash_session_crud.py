@@ -1,9 +1,8 @@
-from sqlalchemy.orm import Session
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import Session, joinedload
 from datetime import datetime
 from sqlalchemy import func
 
-from models.model import CashSession, Order, Payment, PaymentMethod
+from models.model import CashSession, Order, User
 from schemas.cash_session_schema import CashSessionOpen, CashSessionClose, CashSessionResponse
 
 # obtener sesion abierta del usuario
@@ -76,10 +75,15 @@ def close_cash_session(db:Session, user_id: int, closing_amount: float):
 
 #obtener el historial de sesiones
 
-def get_cash_sessions(db:Session, skip: int=0, limit:int=0):
-    return db.query(CashSession.id.desc()).offset(skip).limit(limit).all()
-
-#options(joinedload(CashSession.user)).order_by(CashSession.opening_time.desc()).offset(skip).limit(limit).all()
+def get_cash_sessions(db: Session, skip: int = 0, limit: int = 100):
+    return (
+        db.query(CashSession)
+        .options(joinedload(CashSession.user))
+        .order_by(CashSession.opening_time.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
 
 #obtene el histirial de decisiones por ususrio
 
