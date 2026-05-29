@@ -29,12 +29,12 @@ const SalesPage = () => {
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
     const [selectedClient, setSelectedClient] = useState(COUNTER_CLIENT);
     const [dniSearch, setDniSearch] = useState('');
-    
+
     // Estados de búsqueda DNI
     const [searchStatus, setSearchStatus] = useState(null);
     const [searchError, setSearchError] = useState(null);
     const [externalClientData, setExternalClientData] = useState(null);
-    
+
     // Estados para QuickClientModal
     const [isQuickModalOpen, setIsQuickModalOpen] = useState(false);
     const [quickModalDni, setQuickModalDni] = useState('');
@@ -61,48 +61,45 @@ const SalesPage = () => {
 
     useEffect(() => {
         if (dniSearch.length !== 8) {
-            const timer = setTimeout(() => {
-                if (selectedClient.id !== COUNTER_CLIENT.id) {
-                    setSelectedClient(COUNTER_CLIENT);
-                }
-                setSearchStatus(null);
-                setSearchError(null);
-                setExternalClientData(null);
-            }, 0);
-            return () => clearTimeout(timer);
-        }
+            if (selectedClient.id !== COUNTER_CLIENT.id) {
+                setSelectedClient(COUNTER_CLIENT);
+            }
 
-        let cancelled = false;
-        const startTimer = setTimeout(() => {
-            setSearchStatus('searching');
+            setSearchStatus(null);
             setSearchError(null);
             setExternalClientData(null);
-        }, 0);
 
-        searchClientMutation.mutateAsync(dniSearch)
-            .then((res) => {
-                if (cancelled) return;
+            return;
+        }
+
+        const debounceTimer = setTimeout(async () => {
+            try {
+                setSearchStatus('searching');
+                setSearchError(null);
+                setExternalClientData(null);
+
+                const res = await searchClientMutation.mutateAsync(dniSearch);
+
                 if (res.exists) {
                     setSelectedClient(res.client);
                     setSearchStatus('found_local');
                 } else {
                     setExternalClientData(res.client);
-                    setSearchStatus('not_found');
                     setSelectedClient(COUNTER_CLIENT);
+                    setSearchStatus('not_found');
                 }
-            })
-            .catch((err) => {
-                if (cancelled) return;
+
+            } catch (err) {
                 setSelectedClient(COUNTER_CLIENT);
                 setSearchStatus('error');
                 setSearchError(err.message || 'Error al buscar cliente');
-            });
+            }
 
-        return () => {
-            cancelled = true;
-            clearTimeout(startTimer);
-        };
-    }, [dniSearch, searchClientMutation, selectedClient.id]);
+        }, 800); // espera 800ms antes de consultar
+
+        return () => clearTimeout(debounceTimer);
+
+    }, [dniSearch]);
 
     const handleCreateClient = (prefillData = null) => {
         if (prefillData) {
