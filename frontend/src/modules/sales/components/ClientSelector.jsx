@@ -9,6 +9,7 @@ export const ClientSelector = ({
     selectedClient,
     isSearching,
     onDniChange,
+    onSearchDni,
     onUseCounterSale,
     onCreateClient,
     searchStatus = null,
@@ -28,9 +29,18 @@ export const ClientSelector = ({
                         inputMode="numeric"
                         placeholder="Digita DNI de 8 numeros"
                         onChange={(event) => onDniChange(event.target.value.replace(/\D/g, '').slice(0, 8))}
+                        onKeyDown={(e) => e.key === 'Enter' && onSearchDni()}
                     />
                 </div>
             </div>
+            <Button
+                variant="default"
+                onClick={onSearchDni}
+                disabled={dni.length !== 8 || isSearching}
+            >
+                {isSearching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+                Buscar DNI
+            </Button>
             <Button variant="secondary" onClick={() => onCreateClient(null)}>
                 <UserPlus size={16} /> Registrar
             </Button>

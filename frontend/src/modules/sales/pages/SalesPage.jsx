@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import { PageHeader } from '../../../shared/components/PageHeader';
@@ -41,6 +41,7 @@ const SalesPage = () => {
     const [quickModalName, setQuickModalName] = useState('');
 
     const searchClientMutation = useSearchClient();
+    const dniCache = useRef(new Map());
 
     const paymentMethods = useMemo(() => paymentMethodsQuery.data || [], [paymentMethodsQuery.data]);
     const products = useMemo(() => productsQuery.data || [], [productsQuery.data]);
@@ -59,47 +60,55 @@ const SalesPage = () => {
         if (products.length > 0) syncStock(products);
     }, [products, syncStock]);
 
-    useEffect(() => {
-        if (dniSearch.length !== 8) {
-            if (selectedClient.id !== COUNTER_CLIENT.id) {
-                setSelectedClient(COUNTER_CLIENT);
-            }
-
+    const handleDniChange = (value) => {
+        setDniSearch(value);
+        if (value.length !== 8) {
+            if (selectedClient.id !== COUNTER_CLIENT.id) setSelectedClient(COUNTER_CLIENT);
             setSearchStatus(null);
             setSearchError(null);
             setExternalClientData(null);
+        }
+    };
 
+    const handleSearchDni = async () => {
+        if (dniSearch.length !== 8) return;
+
+        if (dniCache.current.has(dniSearch)) {
+            const cached = dniCache.current.get(dniSearch);
+            if (cached.exists) {
+                setSelectedClient(cached.client);
+                setSearchStatus('found_local');
+            } else {
+                setExternalClientData(cached.client);
+                setSelectedClient(COUNTER_CLIENT);
+                setSearchStatus('not_found');
+            }
+            setSearchError(null);
             return;
         }
 
-        const debounceTimer = setTimeout(async () => {
-            try {
-                setSearchStatus('searching');
-                setSearchError(null);
-                setExternalClientData(null);
+        try {
+            setSearchStatus('searching');
+            setSearchError(null);
+            setExternalClientData(null);
 
-                const res = await searchClientMutation.mutateAsync(dniSearch);
+            const res = await searchClientMutation.mutateAsync(dniSearch);
+            dniCache.current.set(dniSearch, res);
 
-                if (res.exists) {
-                    setSelectedClient(res.client);
-                    setSearchStatus('found_local');
-                } else {
-                    setExternalClientData(res.client);
-                    setSelectedClient(COUNTER_CLIENT);
-                    setSearchStatus('not_found');
-                }
-
-            } catch (err) {
+            if (res.exists) {
+                setSelectedClient(res.client);
+                setSearchStatus('found_local');
+            } else {
+                setExternalClientData(res.client);
                 setSelectedClient(COUNTER_CLIENT);
-                setSearchStatus('error');
-                setSearchError(err.message || 'Error al buscar cliente');
+                setSearchStatus('not_found');
             }
-
-        }, 800); // espera 800ms antes de consultar
-
-        return () => clearTimeout(debounceTimer);
-
-    }, [dniSearch]);
+        } catch (err) {
+            setSelectedClient(COUNTER_CLIENT);
+            setSearchStatus('error');
+            setSearchError(err.message || 'Error al buscar cliente');
+        }
+    };
 
     const handleCreateClient = (prefillData = null) => {
         if (prefillData) {
@@ -176,7 +185,8 @@ const SalesPage = () => {
                 dni={dniSearch}
                 selectedClient={selectedClient}
                 isSearching={searchClientMutation.isPending}
-                onDniChange={setDniSearch}
+                onDniChange={handleDniChange}
+                onSearchDni={handleSearchDni}
                 onUseCounterSale={() => {
                     setSelectedClient(COUNTER_CLIENT);
                     setDniSearch('');
