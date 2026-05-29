@@ -17,6 +17,8 @@ const Sales = lazy(() => import('../modules/sales/pages/SalesPage'));
 const Inventory = lazy(() => import('../modules/inventory/pages/InventoryPage'));
 const Orders = lazy(() => import('../modules/orders/pages/OrdersPage'));
 const CashClosing = lazy(() => import('../modules/cash-session/page/CashSessionPage'));
+const KardexPage = lazy(() => import('../modules/kardex/pages/KardexPage'));
+const ProductKardexPage = lazy(() => import('../modules/kardex/pages/ProductKardexPage'));
 const SaaSGridModule = lazy(() => import('../components/SaaSGrid').then((module) => ({ default: module.SaaSGrid })));
 
 const LazyPage = ({ children }) => (
@@ -77,7 +79,8 @@ export const AppRoutes = () => {
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.kardex]} />}>
-                            <Route path="kardex" element={<ModulePlaceholder title="Kardex" description="Base de navegacion preparada para movimientos de inventario." />} />
+                            <Route path="kardex" element={<LazyPage><KardexPage /></LazyPage>} />
+                            <Route path="kardex/producto/:productId" element={<LazyPage><ProductKardexPage /></LazyPage>} />
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.reports]} />}>
