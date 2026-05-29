@@ -9,6 +9,7 @@ import { Card } from '../../../shared/components/ui/card';
 import { Button } from '../../../shared/components/ui/button';
 import { PurchaseStatusBadge } from '../components/PurchaseStatusBadge';
 import { PurchaseItemsTable } from '../components/PurchaseItemsTable';
+import { PurchaseSummary } from '../components/PurchaseSummary';
 import { usePurchase, useReceivePurchase, useCancelPurchase } from '../hooks/usePurchases';
 import { formatCurrency, formatDateTime } from '../../../shared/utils/formatters';
 
@@ -111,6 +112,9 @@ const PurchaseDetailPage = () => {
                             <InfoRow icon={User} label="Registrado por" value={purchase.username} />
                             <InfoRow icon={Archive} label="Fecha" value={formatDateTime(purchase.purchase_date)} />
                         </Card>
+
+                        {/* Resumen de la compra */}
+                        <PurchaseSummary items={purchase.items} status={statusName} />
 
                         {/* Tabla de ítems (solo lectura) */}
                         <PurchaseItemsTable items={purchase.items} readOnly />

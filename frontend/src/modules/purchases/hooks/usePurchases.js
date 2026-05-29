@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { purchaseService } from '../../../services/purchaseService';
+import { purchaseService } from '../services/purchaseService';
 import { kardexKeys } from '../../kardex/hooks/useKardex';
 
 export const purchaseKeys = {

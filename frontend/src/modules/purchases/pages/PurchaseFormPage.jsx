@@ -11,6 +11,7 @@ import { Label } from '../../../shared/components/ui/label';
 import { SupplierSelector } from '../components/SupplierSelector';
 import { ProductPurchaseSelector } from '../components/ProductPurchaseSelector';
 import { PurchaseItemsTable } from '../components/PurchaseItemsTable';
+import { PurchaseSummary } from '../components/PurchaseSummary';
 import { useCreatePurchase, useReceivePurchase } from '../hooks/usePurchases';
 import { useInventory } from '../../inventory/hooks/useInventory';
 import { formatCurrency } from '../../../shared/utils/formatters';
@@ -161,6 +162,9 @@ const PurchaseFormPage = () => {
                 onUpdate={handleUpdateItem}
                 onRemove={handleRemoveItem}
             />
+
+            {/* Resumen */}
+            {items.length > 0 && <PurchaseSummary items={items} />}
 
             {/* Acciones */}
             {items.length > 0 && (

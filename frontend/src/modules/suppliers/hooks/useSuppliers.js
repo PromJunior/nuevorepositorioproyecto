@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { supplierService } from '../../../services/supplierService';
+import { supplierService } from '../services/supplierService';
 
 export const supplierKeys = {
     all: ['suppliers'],
