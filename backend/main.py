@@ -39,14 +39,14 @@ setup_cors(app)
 def root():
     return {"message": "Bienvenido al sistema de ventas"}
 
-from database.seed import create_initial_admin
+from database.seed import create_initial_admin, seed_purchase_statuses
 from database.database import SessionLocal
 
 @app.on_event("startup")
 def startup_event():
     db = SessionLocal()
-
     try:
         create_initial_admin(db)
+        seed_purchase_statuses(db)
     finally:
         db.close()

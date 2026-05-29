@@ -19,6 +19,10 @@ const Orders = lazy(() => import('../modules/orders/pages/OrdersPage'));
 const CashClosing = lazy(() => import('../modules/cash-session/page/CashSessionPage'));
 const KardexPage = lazy(() => import('../modules/kardex/pages/KardexPage'));
 const ProductKardexPage = lazy(() => import('../modules/kardex/pages/ProductKardexPage'));
+const PurchasesPage = lazy(() => import('../modules/purchases/pages/PurchasesPage'));
+const PurchaseFormPage = lazy(() => import('../modules/purchases/pages/PurchaseFormPage'));
+const PurchaseDetailPage = lazy(() => import('../modules/purchases/pages/PurchaseDetailPage'));
+const SuppliersPage = lazy(() => import('../modules/suppliers/pages/SuppliersPage'));
 const SaaSGridModule = lazy(() => import('../components/SaaSGrid').then((module) => ({ default: module.SaaSGrid })));
 
 const LazyPage = ({ children }) => (
@@ -63,7 +67,9 @@ export const AppRoutes = () => {
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.purchases]} />}>
-                            <Route path="compras" element={<ModulePlaceholder title="Compras" description="Base de navegacion preparada para compras." />} />
+                            <Route path="compras" element={<LazyPage><PurchasesPage /></LazyPage>} />
+                            <Route path="compras/nueva" element={<LazyPage><PurchaseFormPage /></LazyPage>} />
+                            <Route path="compras/:id" element={<LazyPage><PurchaseDetailPage /></LazyPage>} />
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.clients]} />}>
@@ -71,7 +77,7 @@ export const AppRoutes = () => {
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.suppliers]} />}>
-                            <Route path="proveedores" element={<ModulePlaceholder title="Proveedores" description="Base de navegacion preparada para proveedores." />} />
+                            <Route path="proveedores" element={<LazyPage><SuppliersPage /></LazyPage>} />
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.cashClosing]} />}>

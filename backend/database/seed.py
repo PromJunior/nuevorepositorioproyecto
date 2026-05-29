@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from models.model import User, Roles
+from models.model import User, Roles, PurchaseStatus
 from auth.security import get_password_hash
 
 def create_initial_admin(db: Session):
@@ -31,3 +31,13 @@ def create_initial_admin(db: Session):
     db.commit()
 
     print("ADMIN INICIAL CREADO")
+
+PURCHASE_STATUSES = ["BORRADOR", "RECIBIDA", "CANCELADA"]
+
+def seed_purchase_statuses(db: Session):
+    """Inserta los estados de compra si no existen."""
+    for name in PURCHASE_STATUSES:
+        exists = db.query(PurchaseStatus).filter(PurchaseStatus.name_status == name).first()
+        if not exists:
+            db.add(PurchaseStatus(name_status=name))
+    db.commit()

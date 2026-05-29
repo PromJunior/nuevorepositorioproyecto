@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from models.model import Supplier
-from schemas.supplier_schema import SupplierCreate
+from schemas.supplier_schema import SupplierCreate, SupplierUpdate
 
 
 def get_supplier(db: Session, supplier_id: int):
@@ -30,3 +30,18 @@ def create_supplier_db_record(db: Session, supplier: SupplierCreate):
     except Exception as e:
         db.rollback()
         raise e
+
+
+def update_supplier(db: Session, supplier_id: int, data: SupplierUpdate):
+    supplier = db.query(Supplier).filter(Supplier.id == supplier_id).first()
+    if not supplier:
+        return None
+    if data.company_name is not None:
+        supplier.company_name = data.company_name
+    if data.phone is not None:
+        supplier.phone = data.phone
+    if data.email is not None:
+        supplier.email = data.email
+    db.commit()
+    db.refresh(supplier)
+    return supplier
