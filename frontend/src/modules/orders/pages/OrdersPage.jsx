@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
+// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from 'framer-motion';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { 
-    Calendar, FileText, Table as TableIcon, Eye, Printer, 
-    Trash2, Search, DollarSign, Receipt, TrendingUp, 
-    AlertCircle, X, SlidersHorizontal, RefreshCw 
+import {
+    Calendar, FileText, Table as TableIcon, Eye, Printer,
+    Trash2, Search, DollarSign, Receipt, TrendingUp,
+    AlertCircle, X, SlidersHorizontal, RefreshCw
 } from 'lucide-react';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
@@ -29,8 +30,8 @@ const containerVariants = {
 
 const itemVariants = {
     hidden: { opacity: 0, y: 15 },
-    visible: { 
-        opacity: 1, 
+    visible: {
+        opacity: 1,
         y: 0,
         transition: { duration: 0.4, ease: [0.215, 0.610, 0.355, 1.000] }
     }
@@ -51,22 +52,40 @@ const Orders = () => {
         minAmount: ""
     });
 
-    useEffect(() => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            const decoded = jwtDecode(token);
-            setUserRole(decoded.role);
-        }
-        fetchOrders();
-    }, []);
-
+    // ─── fetchOrders declarada antes de useEffect para evitar TDZ ────────────
     const fetchOrders = async () => {
         try {
             const response = await inventoryApi.get('/order/');
             setOrders(response.data);
-        } catch (error) {
-            console.error("Error al cargar órdenes:", error);
+        } catch (_e) {
+            console.error("Error al cargar órdenes:", _e);
         }
+    };
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                setUserRole(decoded.role);
+            } catch (_e) {
+                // token inválido — ignorar
+            }
+        }
+        fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ─── Modal: abrir detalle ─────────────────────────────────────────────────
+    const handleViewDetail = (order) => {
+        setSelectedOrder(order);
+        setShowModal(true);
+    };
+
+    // ─── Modal: cerrar ────────────────────────────────────────────────────────
+    const closeModal = () => {
+        setShowModal(false);
+        setSelectedOrder(null);
     };
 
     const handleClearFilters = () => {
@@ -102,7 +121,6 @@ const Orders = () => {
     // --- AGREGADORES ANALÍTICOS ---
     const totalSales = filteredOrders.length;
     const totalRevenue = filteredOrders.reduce((acc, order) => acc + order.total_amount, 0);
-    const counterSales = filteredOrders.filter(o => o.client?.id === 2 || !o.client).length;
     const avgOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
 
     // Formatear datos para el gráfico de Recharts (Ventas agrupadas por día)
@@ -187,7 +205,7 @@ const Orders = () => {
                 await inventoryApi.delete(`/delete_order/${id}/`);
                 setOrders(orders.filter(order => order.id !== id));
                 MySwal.fire({ title: 'Orden Anulada', icon: 'success', customClass: { popup: '!rounded-2xl' } });
-            } catch (error) {
+            } catch (_e) {
                 MySwal.fire({ title: 'Error', text: 'No se pudo procesar la anulación', icon: 'error', customClass: { popup: '!rounded-2xl' } });
             }
         }
@@ -195,7 +213,7 @@ const Orders = () => {
 
     return (
         <div className="p-6 bg-slate-50/50 min-h-screen space-y-6 font-sans antialiased text-slate-600">
-            
+
             {/* ENCABEZADO ACCIONABLE */}
             <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200/60 pb-5">
                 <div className="space-y-1">
@@ -222,7 +240,7 @@ const Orders = () => {
                         <SlidersHorizontal size={16} className="text-slate-400" />
                         <span>Filtros Avanzados</span>
                     </div>
-                    <button 
+                    <button
                         onClick={handleClearFilters}
                         className="text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors"
                     >
@@ -293,7 +311,7 @@ const Orders = () => {
 
             {/* SECCIÓN SPLIT: MÉTRICAS Y GRÁFICO RECHARTS */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-                
+
                 {/* LISTA DE METRICAS PREMIUM */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                     <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between group hover:border-blue-500 transition-all duration-200">
@@ -337,7 +355,7 @@ const Orders = () => {
                         <h3 className="text-sm font-bold text-slate-800 tracking-tight">Curva de ingresos por flujo diario</h3>
                     </div>
                     <div className="h-44 w-full">
-                        <ResponsiveContainer width="100%" h="100%">
+                        <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={getChartData()} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
                                 <defs>
                                     <linearGradient id="colorMonto" x1="0" y1="0" x2="0" y2="1">
@@ -357,7 +375,7 @@ const Orders = () => {
             </div>
 
             {/* TABLA DE ÓRDENES PREMIUM (REDISEÑO NO-CRUD) */}
-            <motion.div 
+            <motion.div
                 variants={containerVariants}
                 initial="hidden"
                 animate="visible"
@@ -383,7 +401,7 @@ const Orders = () => {
                                 </tr>
                             ) : (
                                 filteredOrders.map((order) => (
-                                    <motion.tr 
+                                    <motion.tr
                                         key={order.id}
                                         variants={itemVariants}
                                         whileHover={{ backgroundColor: "rgba(248, 250, 252, 0.7)" }}
@@ -440,7 +458,7 @@ const Orders = () => {
             <AnimatePresence>
                 {showModal && selectedOrder && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={closeModal}>
-                        <motion.div 
+                        <motion.div
                             initial={{ opacity: 0, scale: 0.96, y: 10 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.98, y: 5 }}
