@@ -1,39 +1,56 @@
-import { productService } from '../../../services/productService';
-import { orderService } from '../../../services/orderService';
-import { reportService } from '../../../services/reportService';
-import { cashSessionService } from '../../../services/cashSessionService';
-
-const isToday = (value) => {
-    if (!value) return false;
-    const date = new Date(value);
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-};
+/**
+ * Dashboard Service – nivel módulo.
+ * Todos los endpoints son del router /dashboard/*.
+ * Usa apiClient (Axios + JWT). NO usa fetch.
+ */
+import apiClient from '../../../services/api/client';
 
 export const dashboardService = {
-    getDashboard: async () => {
-        const [products, orders, salesReport, cashSummary] = await Promise.all([
-            productService.getProducts().catch(() => []),
-            orderService.getOrders().catch(() => []),
-            reportService.getSalesReport().catch(() => null),
-            cashSessionService.getCurrentSession().catch(() => null),
-        ]);
+    /** KPIs principales: ventas, compras, inventario, caja, entidades */
+    getSummary: async () => {
+        const response = await apiClient.get('/dashboard/summary');
+        return response.data;
+    },
 
-        const todayOrders = orders.filter((order) => isToday(order.order_date));
-        const todayRevenue = todayOrders.reduce((total, order) => total + Number(order.total_amount || 0), 0);
-        const lowStockProducts = products.filter((product) => Number(product.stock) <= 5);
+    /** Top N productos por cantidad vendida */
+    getTopProducts: async (limit = 10) => {
+        const response = await apiClient.get('/dashboard/top-products', { params: { limit } });
+        return response.data;
+    },
 
-        return {
-            products,
-            lowStockProducts,
-            latestOrders: orders.slice(-8).reverse(),
-            cashSession: cashSummary,
-            metrics: {
-                salesToday: salesReport?.total_sales ?? todayRevenue,
-                ordersToday: salesReport?.total_orders ?? todayOrders.length,
-                incomeTotal: orders.reduce((total, order) => total + Number(order.total_amount || 0), 0),
-                lowStockCount: lowStockProducts.length,
-            },
-        };
+    /** Top N clientes por gasto total */
+    getTopClients: async (limit = 8) => {
+        const response = await apiClient.get('/dashboard/top-clients', { params: { limit } });
+        return response.data;
+    },
+
+    /** Últimas N ventas con cliente, vendedor y método de pago */
+    getRecentSales: async (limit = 10) => {
+        const response = await apiClient.get('/dashboard/recent-sales', { params: { limit } });
+        return response.data;
+    },
+
+    /** Últimas N compras con proveedor y estado */
+    getRecentPurchases: async (limit = 10) => {
+        const response = await apiClient.get('/dashboard/recent-purchases', { params: { limit } });
+        return response.data;
+    },
+
+    /** Serie temporal de ventas diarias — últimos N días */
+    getSalesChart: async (days = 30) => {
+        const response = await apiClient.get('/dashboard/sales-chart', { params: { days } });
+        return response.data;
+    },
+
+    /** Distribución de ingresos por método de pago */
+    getPaymentMethodStats: async () => {
+        const response = await apiClient.get('/dashboard/payment-methods');
+        return response.data;
+    },
+
+    /** Productos con stock ≤ threshold */
+    getLowStock: async (threshold = 5) => {
+        const response = await apiClient.get('/dashboard/low-stock', { params: { threshold } });
+        return response.data;
     },
 };

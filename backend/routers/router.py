@@ -7,6 +7,7 @@ from routers.cash_session_router import router as cash_session_router
 from routers.inventory_router import router as inventory_router
 from routers.purchases_router import router as purchases_router
 from routers.suppliers_router import router as suppliers_router
+from routers.dashboard_router import router as dashboard_router
 
 router = APIRouter()
 
@@ -18,4 +19,5 @@ router.include_router(cash_session_router)
 router.include_router(inventory_router)
 router.include_router(purchases_router)
 router.include_router(suppliers_router)
+router.include_router(dashboard_router)
 
