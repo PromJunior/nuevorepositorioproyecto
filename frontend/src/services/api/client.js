@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { env } from '../../config/env';
-import { useAuthStore } from '../../store/authStore';
+import { getStoredAuthToken, useAuthStore } from '../../store/authStore';
 
 export const apiClient = axios.create({
     baseURL: env.apiBaseUrl,
@@ -11,10 +11,15 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-    const token = useAuthStore.getState().token || localStorage.getItem(env.legacyTokenKey);
+    const stateToken = useAuthStore.getState().token;
+    const token = stateToken && stateToken !== 'null' && stateToken !== 'undefined'
+        ? stateToken
+        : getStoredAuthToken();
 
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
+    } else if (config.headers?.Authorization) {
+        delete config.headers.Authorization;
     }
 
     return config;

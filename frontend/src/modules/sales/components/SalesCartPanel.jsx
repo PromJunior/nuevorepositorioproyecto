@@ -70,7 +70,7 @@ export const SalesCartPanel = ({
             <label className="text-[11px] font-black uppercase tracking-widest text-slate-400">Metodo de pago</label>
             <select
                 className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10"
-                value={selectedPaymentMethod || ''}
+                value={selectedPaymentMethod || 'Seleccionar Metodo de Pago'}
                 onChange={(event) => onPaymentMethodChange(Number(event.target.value))}
             >
                 {paymentMethods.map((method) => (

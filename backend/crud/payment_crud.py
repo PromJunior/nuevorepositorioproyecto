@@ -4,7 +4,7 @@ from models.model import PaymentMethod
 from schemas.payment_method_schema import PaymentMethodData
 
 def get_payment_method(db:Session):
-    return db.query(PaymentMethod).all()
+    return db.query(PaymentMethod).order_by(PaymentMethod.id.desc()).all()
 
 def create_payment_method(db: Session, payment_method: PaymentMethodData):
     db_pm = PaymentMethod(name_payment_method=payment_method.name_payment_method)
@@ -27,4 +27,4 @@ def delete_payment_method(db: Session, pm_id: int):
         db.delete(db_pm)
         db.commit()
         return True
-    return False
+    return False

@@ -4,8 +4,33 @@ import { APP_ROLES, ROUTE_PERMISSIONS, ROUTES } from '../constants/routes';
 import { env } from '../config/env';
 import { getUserFromToken, isTokenExpired } from '../utils/jwt';
 
+const isValidTokenValue = (token) => {
+    return Boolean(token && token !== 'null' && token !== 'undefined');
+};
+
+const getTokenFromPersistedAuth = () => {
+    try {
+        const persistedAuth = JSON.parse(localStorage.getItem(env.authStorageKey) || '{}');
+        const state = persistedAuth.state || persistedAuth;
+
+        return state.token || state.access_token || state.authToken || null;
+    } catch {
+        return null;
+    }
+};
+
+export const getStoredAuthToken = () => {
+    const legacyToken = localStorage.getItem(env.legacyTokenKey);
+    const persistedToken = getTokenFromPersistedAuth();
+
+    if (isValidTokenValue(legacyToken)) return legacyToken;
+    if (isValidTokenValue(persistedToken)) return persistedToken;
+
+    return null;
+};
+
 const syncLegacyToken = (token) => {
-    if (token) {
+    if (isValidTokenValue(token)) {
         localStorage.setItem(env.legacyTokenKey, token);
         return;
     }
@@ -30,7 +55,7 @@ const getDefaultRouteForRole = (role) => {
 export const useAuthStore = create(
     persist(
         (set, get) => ({
-            token: localStorage.getItem(env.legacyTokenKey),
+            token: getStoredAuthToken(),
             refreshToken: null,
             user: null,
             role: null,
@@ -39,6 +64,10 @@ export const useAuthStore = create(
             status: 'idle',
 
             login: ({ token, refreshToken = null, user = null }) => {
+                if (!isValidTokenValue(token)) {
+                    throw new Error('No se recibio un token de acceso valido.');
+                }
+
                 const tokenUser = getUserFromToken(token);
                 const nextUser = user || tokenUser;
                 const nextRole = nextUser?.role || tokenUser?.role || null;
@@ -74,8 +103,7 @@ export const useAuthStore = create(
 
             hydrateFromToken: () => {
                 const stateToken = get().token;
-                const legacyToken = localStorage.getItem(env.legacyTokenKey);
-                const token = stateToken || legacyToken;
+                const token = isValidTokenValue(stateToken) ? stateToken : getStoredAuthToken();
 
                 if (!token || isTokenExpired(token)) {
                     get().logout();
@@ -98,7 +126,8 @@ export const useAuthStore = create(
             },
 
             isAuthenticated: () => {
-                const token = get().token || localStorage.getItem(env.legacyTokenKey);
+                const stateToken = get().token;
+                const token = isValidTokenValue(stateToken) ? stateToken : getStoredAuthToken();
                 return Boolean(token && !isTokenExpired(token));
             },
 
