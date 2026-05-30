@@ -11,7 +11,7 @@ import { useCreateClient, useCreateSale, usePaymentMethods, useSalesProducts, us
 import { formatCurrency } from '../../../shared/utils/formatters';
 
 const MySwal = withReactContent(Swal);
-const COUNTER_CLIENT = { id: 2, full_name: 'Venta Mostrador' };
+const COUNTER_CLIENT = { id: 4, full_name: 'Venta Mostrador' };
 
 const SalesPage = () => {
     const productsQuery = useSalesProducts();

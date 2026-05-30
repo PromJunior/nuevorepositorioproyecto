@@ -97,7 +97,13 @@ def get_clients_crm_summary(db: Session):
         "new_clients_this_month": db.query(func.count(Client.id)).filter(Client.create_at >= month_start).scalar() or 0,
     }
 
-def get_client_purchase_history(db: Session, client_id: int, skip: int = 0, limit: int = 20):
+def get_client_purchase_history(
+    db: Session,
+    client_id: int,
+    skip: int = 0,
+    limit: int = 20,
+    payment_method_id: int = None,
+):
     query = (
         db.query(Order)
         .options(
@@ -106,8 +112,12 @@ def get_client_purchase_history(db: Session, client_id: int, skip: int = 0, limi
             joinedload(Order.payment_order).joinedload(Payment.payment_method),
         )
         .filter(Order.client_id == client_id)
-        .order_by(Order.order_date.desc())
     )
+    if payment_method_id is not None:
+        query = query.join(Payment, Payment.order_id == Order.id).filter(
+            Payment.id_payment_method == payment_method_id
+        )
+    query = query.order_by(Order.order_date.desc())
     total = query.count()
     orders = query.offset(skip).limit(limit).all()
 

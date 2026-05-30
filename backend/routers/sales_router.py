@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 
 from database.database import get_db
 from auth.security import get_current_user, require_role
@@ -41,12 +41,18 @@ def create_order_db(order: OrderCreate, db: Session = Depends(get_db), current_u
 
 
 @router.get("/order/", response_model=List[OrderResponse])
-def get_order_db(skip: int = 0, limit: int = 100, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_order_db(
+    skip: int = 0,
+    limit: int = 100,
+    payment_method_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     role = current_user.role.name
     if role == "admin":
-        return order_crud.get_order(db=db, skip=skip, limit=limit)
+        return order_crud.get_order(db=db, skip=skip, limit=limit, payment_method_id=payment_method_id)
     elif role == "vendedor":
-        return order_crud.get_order(db=db, skip=skip, limit=limit, user_id=current_user.id)
+        return order_crud.get_order(db=db, skip=skip, limit=limit, user_id=current_user.id, payment_method_id=payment_method_id)
     
     raise HTTPException(status_code=403, detail="No tienes permisos para ver estas ordenes")
 
@@ -174,12 +180,19 @@ def get_client_purchase_history_db(
     client_id: int,
     skip: int = Query(0, ge=0),
     limit: int = Query(20, ge=1, le=100),
+    payment_method_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if not get_client_by_id(db=db, client_id=client_id):
         raise HTTPException(status_code=404, detail="Cliente no encontrado")
-    return get_client_purchase_history(db=db, client_id=client_id, skip=skip, limit=limit)
+    return get_client_purchase_history(
+        db=db,
+        client_id=client_id,
+        skip=skip,
+        limit=limit,
+        payment_method_id=payment_method_id,
+    )
 
 
 @router.get("/payment_methods/", response_model=list[PaymentMethodResponse])

@@ -6,7 +6,6 @@ export const supplierKeys = {
     list: ['suppliers', 'list'],
 };
 
-// ─── Listar proveedores ───────────────────────────────────────────────────────
 export const useSuppliers = () =>
     useQuery({
         queryKey: supplierKeys.list,
@@ -14,7 +13,6 @@ export const useSuppliers = () =>
         staleTime: 1000 * 60 * 5,
     });
 
-// ─── Crear proveedor ──────────────────────────────────────────────────────────
 export const useCreateSupplier = () => {
     const qc = useQueryClient();
     return useMutation({
@@ -23,7 +21,14 @@ export const useCreateSupplier = () => {
     });
 };
 
-// ─── Actualizar proveedor ─────────────────────────────────────────────────────
+export const useGenericSupplier = () => {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: supplierService.getOrCreateGenericSupplier,
+        onSuccess: () => qc.invalidateQueries({ queryKey: supplierKeys.all }),
+    });
+};
+
 export const useUpdateSupplier = () => {
     const qc = useQueryClient();
     return useMutation({
@@ -32,11 +37,10 @@ export const useUpdateSupplier = () => {
     });
 };
 
-// ─── Buscar RUC (local first → API) – devuelve { source, data } ──────────────
 export const useSearchRuc = () =>
     useMutation({
         mutationFn: async (ruc) => {
-            if (!ruc || ruc.length !== 11) throw new Error('El RUC debe tener 11 dígitos');
+            if (!ruc || ruc.length !== 11) throw new Error('El RUC debe tener 11 digitos');
             try {
                 const local = await supplierService.getSupplierByRucLocal(ruc);
                 return { source: 'local', data: local, exists: true };

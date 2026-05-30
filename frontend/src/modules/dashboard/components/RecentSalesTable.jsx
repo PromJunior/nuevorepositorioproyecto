@@ -5,8 +5,8 @@ import { formatCurrency, formatDateTime } from '../../../shared/utils/formatters
 import { useRecentSales } from '../hooks/useDashboard';
 import { ROUTES } from '../../../constants/routes';
 
-export const RecentSalesTable = () => {
-    const { data: sales = [], isLoading } = useRecentSales(10);
+export const RecentSalesTable = ({ paymentMethodId = '' }) => {
+    const { data: sales = [], isLoading } = useRecentSales(10, { payment_method_id: paymentMethodId });
 
     return (
         <Card className="overflow-hidden">

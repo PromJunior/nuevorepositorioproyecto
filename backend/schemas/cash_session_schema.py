@@ -1,6 +1,7 @@
-from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
 
 
 class CashSessionOpen(BaseModel):
@@ -11,7 +12,6 @@ class CashSessionClose(BaseModel):
     closing_amount: float
 
 
-# ─── Respuesta base de sesión ────────────────────────────────────────────────
 class CashSessionResponse(BaseModel):
     id: int
     user_id: int
@@ -26,13 +26,18 @@ class CashSessionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# ─── Respuesta extendida con datos del usuario (para historial) ──────────────
 class CashSessionWithUserResponse(CashSessionResponse):
     username: Optional[str] = None
     fullname: Optional[str] = None
 
 
-# ─── Resumen de sesión activa ────────────────────────────────────────────────
+class CashSessionPaymentBreakdown(BaseModel):
+    payment_method_id: int
+    payment_method: str
+    total_sales: float
+    total_orders: int
+
+
 class CashSessionSummary(BaseModel):
     session_id: int
     user_id: int
@@ -43,8 +48,8 @@ class CashSessionSummary(BaseModel):
     difference: Optional[float] = None
     total_sales: float
     total_orders: int
+    payment_breakdown: list[CashSessionPaymentBreakdown] = []
     opening_time: datetime
     closing_time: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
-

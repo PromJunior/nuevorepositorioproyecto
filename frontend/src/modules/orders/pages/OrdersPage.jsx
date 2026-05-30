@@ -11,6 +11,7 @@ import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import { useAuthStore } from '../../../shared/store/useAuthStore';
 import { orderService } from '../../../services/orderService';
+import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
 
 const MySwal = withReactContent(Swal);
 const MotionDiv = motion.div;
@@ -46,12 +47,13 @@ const Orders = () => {
         dateFrom: "",
         dateTo: "",
         saleType: "Todos",
-        minAmount: ""
+        minAmount: "",
+        payment_method_id: "",
     });
 
     const ordersQuery = useQuery({
-        queryKey: ['orders'],
-        queryFn: orderService.getOrders,
+        queryKey: ['orders', filters.payment_method_id],
+        queryFn: () => orderService.getOrders({ payment_method_id: filters.payment_method_id || undefined }),
         staleTime: 1000 * 30,
     });
 
@@ -80,7 +82,8 @@ const Orders = () => {
             dateFrom: "",
             dateTo: "",
             saleType: "Todos",
-            minAmount: ""
+            minAmount: "",
+            payment_method_id: "",
         });
     };
 
@@ -96,12 +99,14 @@ const Orders = () => {
         const matchesDate = (!from || orderDate >= from) && (!to || orderDate <= to);
 
         const matchesType = filters.saleType === "Todos" ||
-            (filters.saleType === "Venta Mostrador" && order.client?.id === 2) ||
-            (filters.saleType === "Cliente" && order.client?.id !== 2);
+            (filters.saleType === "Venta Mostrador" && order.client?.id === 4) ||
+            (filters.saleType === "Cliente" && order.client?.id !== 4);
 
         const matchesAmount = !filters.minAmount || order.total_amount >= (parseFloat(filters.minAmount) || 0);
+        const matchesPaymentMethod = !filters.payment_method_id ||
+            String(order.payment_method?.id || '') === String(filters.payment_method_id);
 
-        return matchesClient && matchesDate && matchesType && matchesAmount;
+        return matchesClient && matchesDate && matchesType && matchesAmount && matchesPaymentMethod;
     });
 
     // --- AGREGADORES ANALÍTICOS ---
@@ -237,7 +242,7 @@ const Orders = () => {
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Búsqueda Nominal</label>
                         <div className="relative group">
@@ -293,6 +298,14 @@ const Orders = () => {
                             className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-medium focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 outline-none transition-all"
                             value={filters.minAmount}
                             onChange={(e) => setFilters({ ...filters, minAmount: e.target.value })}
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Metodo de Pago</label>
+                        <PaymentMethodFilter
+                            value={filters.payment_method_id}
+                            onChange={(value) => setFilters({ ...filters, payment_method_id: value })}
                         />
                     </div>
                 </div>
@@ -406,7 +419,7 @@ const Orders = () => {
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            {order.client?.id === 2 ? (
+                                            {order.client?.id === 4 ? (
                                                 <span className="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-50 text-slate-500 border border-slate-200/60 text-xs font-semibold">
                                                     Venta Mostrador
                                                 </span>

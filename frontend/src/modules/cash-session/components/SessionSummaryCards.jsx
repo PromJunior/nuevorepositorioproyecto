@@ -30,6 +30,7 @@ export const SessionSummaryCards = ({ summary }) => {
     const totalSales = Number(summary.total_sales ?? 0);
     const opening = Number(summary.opening_amount ?? 0);
     const diff = Number(summary.difference ?? 0);
+    const breakdown = summary.payment_breakdown || [];
 
     return (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -60,6 +61,28 @@ export const SessionSummaryCards = ({ summary }) => {
                 sub={diff === 0 ? 'Sin descuadre' : diff > 0 ? 'Sobrante' : 'Faltante'}
                 color={diff === 0 ? 'text-emerald-600' : diff > 0 ? 'text-indigo-600' : 'text-rose-600'}
             />
+            {breakdown.length > 0 && (
+                <Card className="p-5 sm:col-span-2 xl:col-span-4">
+                    <p className="mb-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Desglose por metodo de pago
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                        {breakdown.map((item) => (
+                            <div key={item.payment_method_id} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                                <div className="flex items-center justify-between gap-3">
+                                    <span className="text-xs font-black text-slate-700">{item.payment_method}</span>
+                                    <span className="font-mono text-sm font-black text-slate-900">
+                                        {formatCurrency(item.total_sales, 'PEN')}
+                                    </span>
+                                </div>
+                                <p className="mt-0.5 text-[11px] font-semibold text-slate-400">
+                                    {item.total_orders} transacciones
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </Card>
+            )}
         </div>
     );
 };

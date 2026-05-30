@@ -4,9 +4,11 @@ import { cashSessionService } from '../../../services/cashSessionService';
 // ─── Query Keys ─────────────────────────────────────────────────────────────
 export const cashSessionKeys = {
     active: ['cash-session', 'active'],
-    summary: ['cash-session', 'summary'],
-    history: ['cash-session', 'history'],
+    summary: (params = {}) => ['cash-session', 'summary', params],
+    history: (params = {}) => ['cash-session', 'history', params],
 };
+
+const clean = (params = {}) => Object.fromEntries(Object.entries(params).filter(([, value]) => value));
 
 // ─── Sesión activa ───────────────────────────────────────────────────────────
 /**
@@ -33,12 +35,12 @@ export const useActiveSession = () =>
  * Ventas del día, efectivo esperado, total de órdenes, diferencia.
  * Solo consulta si hay sesión abierta (enabled depende de `hasSession`).
  */
-export const useSessionSummary = (hasSession) =>
+export const useSessionSummary = (hasSession, params = {}) =>
     useQuery({
-        queryKey: cashSessionKeys.summary,
+        queryKey: cashSessionKeys.summary(clean(params)),
         queryFn: async () => {
             try {
-                return await cashSessionService.getActiveSummary();
+                return await cashSessionService.getActiveSummary(clean(params));
             } catch (error) {
                 if (error.response?.status === 404) return null;
                 throw error;
@@ -50,10 +52,10 @@ export const useSessionSummary = (hasSession) =>
     });
 
 // ─── Historial ───────────────────────────────────────────────────────────────
-export const useSessionHistory = () =>
+export const useSessionHistory = (params = {}) =>
     useQuery({
-        queryKey: cashSessionKeys.history,
-        queryFn: cashSessionService.getSessionHistory,
+        queryKey: cashSessionKeys.history(clean(params)),
+        queryFn: () => cashSessionService.getSessionHistory(clean(params)),
         staleTime: 1000 * 60,
     });
 
@@ -64,8 +66,8 @@ export const useOpenSession = () => {
         mutationFn: cashSessionService.openSession,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: cashSessionKeys.active });
-            queryClient.invalidateQueries({ queryKey: cashSessionKeys.summary });
-            queryClient.invalidateQueries({ queryKey: cashSessionKeys.history });
+            queryClient.invalidateQueries({ queryKey: ['cash-session', 'summary'] });
+            queryClient.invalidateQueries({ queryKey: ['cash-session', 'history'] });
         },
     });
 };
@@ -77,8 +79,8 @@ export const useCloseSession = () => {
         mutationFn: cashSessionService.closeSession,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: cashSessionKeys.active });
-            queryClient.invalidateQueries({ queryKey: cashSessionKeys.summary });
-            queryClient.invalidateQueries({ queryKey: cashSessionKeys.history });
+            queryClient.invalidateQueries({ queryKey: ['cash-session', 'summary'] });
+            queryClient.invalidateQueries({ queryKey: ['cash-session', 'history'] });
         },
     });
 };

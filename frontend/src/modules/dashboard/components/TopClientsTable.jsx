@@ -4,8 +4,8 @@ import { Card } from '../../../shared/components/ui/card';
 import { formatCurrency, formatNumber } from '../../../shared/utils/formatters';
 import { useTopClients } from '../hooks/useDashboard';
 
-export const TopClientsTable = () => {
-    const { data: clients = [], isLoading } = useTopClients(8);
+export const TopClientsTable = ({ paymentMethodId = '' }) => {
+    const { data: clients = [], isLoading } = useTopClients(8, { payment_method_id: paymentMethodId });
 
     return (
         <Card className="overflow-hidden">

@@ -4,6 +4,11 @@
  */
 import apiClient from '../../../services/api/client';
 
+export const GENERIC_SUPPLIER = {
+    company_name: 'Proveedor Genérico',
+    ruc: '00000000000',
+};
+
 export const supplierService = {
     /** Lista todos los proveedores registrados */
     getSuppliers: async (params = {}) => {
@@ -21,10 +26,12 @@ export const supplierService = {
      * Busca proveedor por RUC en la BD LOCAL.
      * NO llama a ApiPeru. Lanza 404 si no existe.
      */
-    getSupplierByRuc: async (ruc) => {
+    getSupplierByRucLocal: async (ruc) => {
         const response = await apiClient.get(`/suppliers/ruc-local/${ruc}`);
         return response.data;
     },
+
+    getSupplierByRuc: async (ruc) => supplierService.getSupplierByRucLocal(ruc),
 
     /**
      * Consulta datos del RUC en ApiPeru.
@@ -42,6 +49,26 @@ export const supplierService = {
     createSupplier: async (data) => {
         const response = await apiClient.post('/suppliers/', data);
         return response.data;
+    },
+
+    getOrCreateGenericSupplier: async () => {
+        try {
+            return await supplierService.getSupplierByRucLocal(GENERIC_SUPPLIER.ruc);
+        } catch (error) {
+            if (error.response?.status !== 404) {
+                throw error;
+            }
+        }
+
+        try {
+            return await supplierService.createSupplier(GENERIC_SUPPLIER);
+        } catch (error) {
+            if (error.response?.status === 409) {
+                return supplierService.getSupplierByRucLocal(GENERIC_SUPPLIER.ruc);
+            }
+
+            throw error;
+        }
     },
 
     /**

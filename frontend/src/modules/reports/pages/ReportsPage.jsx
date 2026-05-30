@@ -10,6 +10,7 @@ import { PurchaseStatusBadge } from '../../purchases/components/PurchaseStatusBa
 import { SessionStatusBadge } from '../../cash-session/components/SessionStatusBadge';
 import { ReportFilters } from '../components/ReportFilters';
 import { ExportButtons } from '../components/ExportButtons';
+import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
 import {
     useSalesReport, usePurchasesReport,
     useKardexReport, useCashReport, useAuditLogs,
@@ -74,7 +75,20 @@ const SalesTab = () => {
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <ReportFilters filters={filters} onFilterChange={onChange} onReset={onReset} />
+                <ReportFilters
+                    filters={filters}
+                    onFilterChange={onChange}
+                    onReset={onReset}
+                    extraSlot={
+                        <div className="space-y-1">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Metodo de pago</label>
+                            <PaymentMethodFilter
+                                value={filters.payment_method_id || ''}
+                                onChange={(value) => onChange('payment_method_id', value)}
+                            />
+                        </div>
+                    }
+                />
             </div>
             <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-400">{data.length} registros</span>
@@ -245,7 +259,20 @@ const CashTab = () => {
 
     return (
         <div className="space-y-4">
-            <ReportFilters filters={filters} onFilterChange={onChange} onReset={onReset} />
+            <ReportFilters
+                filters={filters}
+                onFilterChange={onChange}
+                onReset={onReset}
+                extraSlot={
+                    <div className="space-y-1">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Metodo de pago</label>
+                        <PaymentMethodFilter
+                            value={filters.payment_method_id || ''}
+                            onChange={(value) => onChange('payment_method_id', value)}
+                        />
+                    </div>
+                }
+            />
             <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-400">{data.length} registros</span>
                 <div className="flex items-center gap-3">

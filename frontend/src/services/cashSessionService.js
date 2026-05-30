@@ -16,8 +16,8 @@ export const cashSessionService = {
     },
 
     /** Resumen de la sesión activa: ventas, totales, diferencia esperada */
-    getActiveSummary: async () => {
-        const response = await apiClient.get('/cash-session/active/summary');
+    getActiveSummary: async (params = {}) => {
+        const response = await apiClient.get('/cash-session/active/summary', { params });
         return response.data;
     },
 
@@ -34,8 +34,8 @@ export const cashSessionService = {
      * Admin → todas las sesiones.
      * Vendedor → solo las propias.
      */
-    getSessionHistory: async () => {
-        const response = await apiClient.get('/cash-session/history');
+    getSessionHistory: async (params = {}) => {
+        const response = await apiClient.get('/cash-session/history', { params });
         return response.data;
     },
 };

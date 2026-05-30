@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
-import { ArrowLeft, FileText, Loader2, Save } from 'lucide-react';
+import { ArrowLeft, Building2, FileText, Loader2, Save } from 'lucide-react';
 import { PageHeader } from '../../../shared/components/PageHeader';
 import { Card } from '../../../shared/components/ui/card';
 import { Button } from '../../../shared/components/ui/button';
@@ -15,6 +15,7 @@ import { PurchaseSummary } from '../components/PurchaseSummary';
 import { useCreatePurchase, useReceivePurchase } from '../hooks/usePurchases';
 import { useInventory } from '../../inventory/hooks/useInventory';
 import { formatCurrency } from '../../../shared/utils/formatters';
+import { useGenericSupplier } from '../../suppliers/hooks/useSuppliers';
 
 const MySwal = withReactContent(Swal);
 
@@ -26,6 +27,7 @@ const PurchaseFormPage = () => {
 
     const createMutation = useCreatePurchase();
     const receiveMutation = useReceivePurchase();
+    const genericSupplierMutation = useGenericSupplier();
     const { products } = useInventory();
 
     const existingIds = useMemo(() => new Set(items.map((i) => i.product_id)), [items]);
@@ -60,7 +62,7 @@ const PurchaseFormPage = () => {
     };
 
     const validate = () => {
-        if (!supplier) return 'Selecciona un proveedor.';
+        if (!supplier?.id) return 'Selecciona un proveedor.';
         if (items.length === 0) return 'Agrega al menos un producto.';
         if (items.some((it) => it.quantity <= 0)) return 'Todas las cantidades deben ser > 0.';
         if (items.some((it) => it.unit_cost <= 0)) return 'Todos los costos deben ser > 0.';
@@ -76,6 +78,20 @@ const PurchaseFormPage = () => {
             unit_cost: it.unit_cost,
         })),
     });
+
+    const handleUseGenericSupplier = async () => {
+        try {
+            const genericSupplier = await genericSupplierMutation.mutateAsync();
+            setSupplier(genericSupplier);
+        } catch (error) {
+            MySwal.fire({
+                icon: 'error',
+                title: 'Error al seleccionar proveedor',
+                text: error.response?.data?.detail || error.message,
+                customClass: { popup: '!rounded-2xl' },
+            });
+        }
+    };
 
     const handleSaveDraft = async () => {
         const err = validate();
@@ -115,7 +131,7 @@ const PurchaseFormPage = () => {
         }
     };
 
-    const isBusy = createMutation.isPending || receiveMutation.isPending;
+    const isBusy = createMutation.isPending || receiveMutation.isPending || genericSupplierMutation.isPending;
 
     return (
         <div className="min-h-screen space-y-6 bg-slate-50/40 p-6">
@@ -132,6 +148,21 @@ const PurchaseFormPage = () => {
 
             {/* Proveedor */}
             <SupplierSelector value={supplier} onChange={setSupplier} />
+
+            <div className="flex justify-end">
+                <Button
+                    variant="secondary"
+                    onClick={handleUseGenericSupplier}
+                    disabled={isBusy}
+                >
+                    {genericSupplierMutation.isPending ? (
+                        <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                        <Building2 size={14} />
+                    )}
+                    Usar proveedor genérico
+                </Button>
+            </div>
 
             {/* N° Factura */}
             <Card className="p-4">

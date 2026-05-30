@@ -150,6 +150,7 @@ def get_cash_report(
     date_to: Optional[date] = None,
     user_id: Optional[int] = None,
     status: Optional[str] = None,
+    payment_method_id: Optional[int] = None,
     skip: int = 0,
     limit: int = 200,
 ) -> tuple[int, list]:
@@ -158,6 +159,13 @@ def get_cash_report(
     if date_to:   q = q.filter(CashSession.opening_time <= _dt_to(date_to))
     if user_id:   q = q.filter(CashSession.user_id == user_id)
     if status:    q = q.filter(CashSession.status == status.upper())
+    if payment_method_id:
+        q = (
+            q.join(Order, Order.cash_session_id == CashSession.id)
+            .join(Payment, Payment.order_id == Order.id)
+            .filter(Payment.id_payment_method == payment_method_id)
+            .distinct()
+        )
 
     total = q.count()
     rows = q.order_by(CashSession.opening_time.desc()).offset(skip).limit(limit).all()

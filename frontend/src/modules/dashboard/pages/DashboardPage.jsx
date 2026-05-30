@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, ShoppingCart, Wallet, Zap } from 'lucide-react';
 import { PageHeader } from '../../../shared/components/PageHeader';
@@ -8,6 +8,7 @@ import { Button } from '../../../shared/components/ui/button';
 import { ROUTES } from '../../../constants/routes';
 import { useAuthStore } from '../../../shared/store/useAuthStore';
 import { useDashboardSummary } from '../hooks/useDashboard';
+import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
 
 // Componentes del dashboard
 import { DashboardKpiCards } from '../components/DashboardKpiCards';
@@ -49,7 +50,8 @@ const QuickActions = () => (
 
 const DashboardPage = () => {
     const role = useAuthStore((s) => s.role);
-    const summaryQuery = useDashboardSummary();
+    const [paymentMethodId, setPaymentMethodId] = useState('');
+    const summaryQuery = useDashboardSummary({ payment_method_id: paymentMethodId });
 
     return (
         <div className="min-h-screen space-y-6 bg-slate-50/40 p-6">
@@ -65,6 +67,15 @@ const DashboardPage = () => {
                     </Link>
                 }
             />
+
+            <Card className="p-3">
+                <PaymentMethodFilter
+                    value={paymentMethodId}
+                    onChange={setPaymentMethodId}
+                    quickOnly
+                    variant="buttons"
+                />
+            </Card>
 
             {/* ─── KPI Cards ──────────────────────────────────────── */}
             <DataState
@@ -83,21 +94,21 @@ const DashboardPage = () => {
             {/* ─── Gráficos principales ───────────────────────────── */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
                 <div className="min-w-0 xl:col-span-2">
-                    <SalesChart />
+                    <SalesChart paymentMethodId={paymentMethodId} />
                 </div>
-                <PaymentMethodsChart />
+                <PaymentMethodsChart paymentMethodId={paymentMethodId} />
             </div>
 
             {/* ─── Top productos + Top clientes ───────────────────── */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <TopProductsTable />
-                <TopClientsTable />
+                <TopProductsTable paymentMethodId={paymentMethodId} />
+                <TopClientsTable paymentMethodId={paymentMethodId} />
             </div>
 
             {/* ─── Ventas recientes + Accesos rápidos ─────────────── */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
                 <div className="xl:col-span-2">
-                    <RecentSalesTable />
+                    <RecentSalesTable paymentMethodId={paymentMethodId} />
                 </div>
                 <QuickActions />
             </div>

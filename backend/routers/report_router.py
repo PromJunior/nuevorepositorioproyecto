@@ -63,11 +63,13 @@ def export_sales_excel(
     date_to:   Optional[date] = None,
     user_id:   Optional[int]  = None,
     client_id: Optional[int]  = None,
+    payment_method_id: Optional[int] = None,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_admin_user),
 ):
     _, rows = report_crud.get_sales_report(db, date_from=date_from, date_to=date_to,
-                                           user_id=user_id, client_id=client_id, limit=5000)
+                                           user_id=user_id, client_id=client_id,
+                                           payment_method_id=payment_method_id, limit=5000)
     buffer = report_crud.generate_sales_excel(rows)
     return _excel_response(buffer, "reporte_ventas.xlsx")
 
@@ -77,11 +79,14 @@ def export_sales_pdf(
     date_from: Optional[date] = None,
     date_to:   Optional[date] = None,
     user_id:   Optional[int]  = None,
+    client_id: Optional[int]  = None,
+    payment_method_id: Optional[int] = None,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_admin_user),
 ):
     _, rows = report_crud.get_sales_report(db, date_from=date_from, date_to=date_to,
-                                           user_id=user_id, limit=2000)
+                                           user_id=user_id, client_id=client_id,
+                                           payment_method_id=payment_method_id, limit=2000)
     buffer = report_crud.generate_sales_pdf(rows)
     return _pdf_response(buffer, "reporte_ventas.pdf")
 
@@ -195,6 +200,7 @@ def cash_report(
     date_to:   Optional[date] = None,
     user_id:   Optional[int]  = None,
     status:    Optional[str]  = None,
+    payment_method_id: Optional[int] = None,
     skip: int = Query(0, ge=0),
     limit: int = Query(200, ge=1, le=500),
     db: Session = Depends(get_db),
@@ -202,7 +208,8 @@ def cash_report(
 ):
     _, rows = report_crud.get_cash_report(
         db, date_from=date_from, date_to=date_to,
-        user_id=user_id, status=status, skip=skip, limit=limit,
+        user_id=user_id, status=status, payment_method_id=payment_method_id,
+        skip=skip, limit=limit,
     )
     return rows
 
@@ -211,10 +218,17 @@ def cash_report(
 def export_cash_excel(
     date_from: Optional[date] = None,
     date_to:   Optional[date] = None,
+    user_id:   Optional[int]  = None,
+    status:    Optional[str]  = None,
+    payment_method_id: Optional[int] = None,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_admin_user),
 ):
-    _, rows = report_crud.get_cash_report(db, date_from=date_from, date_to=date_to, limit=5000)
+    _, rows = report_crud.get_cash_report(
+        db, date_from=date_from, date_to=date_to,
+        user_id=user_id, status=status, payment_method_id=payment_method_id,
+        limit=5000,
+    )
     return _excel_response(report_crud.generate_cash_excel(rows), "reporte_caja.xlsx")
 
 
@@ -222,10 +236,17 @@ def export_cash_excel(
 def export_cash_pdf(
     date_from: Optional[date] = None,
     date_to:   Optional[date] = None,
+    user_id:   Optional[int]  = None,
+    status:    Optional[str]  = None,
+    payment_method_id: Optional[int] = None,
     db: Session = Depends(get_db),
     _: User = Depends(get_current_admin_user),
 ):
-    _, rows = report_crud.get_cash_report(db, date_from=date_from, date_to=date_to, limit=2000)
+    _, rows = report_crud.get_cash_report(
+        db, date_from=date_from, date_to=date_to,
+        user_id=user_id, status=status, payment_method_id=payment_method_id,
+        limit=2000,
+    )
     return _pdf_response(report_crud.generate_cash_pdf(rows), "reporte_caja.pdf")
 
 

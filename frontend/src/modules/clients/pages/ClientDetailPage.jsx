@@ -10,6 +10,7 @@ import { formatDateTime } from '../../../shared/utils/formatters';
 import { ClientPurchaseHistory } from '../components/ClientPurchaseHistory';
 import { ClientStatsCards } from '../components/ClientStatsCards';
 import { useClient, useClientPurchaseHistory, useClientStats } from '../hooks/useClients';
+import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
 
 const PAGE_SIZE = 10;
 
@@ -33,7 +34,12 @@ const ClientDetailPage = () => {
     const navigate = useNavigate();
     const { id } = useParams();
     const [page, setPage] = useState(1);
-    const historyParams = { skip: (page - 1) * PAGE_SIZE, limit: PAGE_SIZE };
+    const [paymentMethodId, setPaymentMethodId] = useState('');
+    const historyParams = {
+        skip: (page - 1) * PAGE_SIZE,
+        limit: PAGE_SIZE,
+        payment_method_id: paymentMethodId || undefined,
+    };
     const clientQuery = useClient(id);
     const statsQuery = useClientStats(id);
     const historyQuery = useClientPurchaseHistory(id, historyParams);
@@ -90,9 +96,21 @@ const ClientDetailPage = () => {
                         </DataState>
 
                         <Card className="p-5">
-                            <div className="mb-4">
+                            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                                <div>
                                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Ventas realizadas</p>
                                 <h3 className="text-sm font-black text-slate-900">Historial de compras</h3>
+                                </div>
+                                <div className="w-full max-w-xs space-y-1">
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Metodo de pago</p>
+                                    <PaymentMethodFilter
+                                        value={paymentMethodId}
+                                        onChange={(value) => {
+                                            setPaymentMethodId(value);
+                                            setPage(1);
+                                        }}
+                                    />
+                                </div>
                             </div>
                             <ClientPurchaseHistory
                                 history={historyQuery.data}

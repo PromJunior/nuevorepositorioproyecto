@@ -57,6 +57,7 @@ def get_active_session(
 # ─── Resumen de la sesión activa ─────────────────────────────────────────────
 @router.get("/active/summary", response_model=CashSessionSummary)
 def get_active_summary(
+    payment_method_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -64,7 +65,11 @@ def get_active_summary(
     if not session:
         raise HTTPException(status_code=404, detail="No hay sesión de caja abierta.")
     try:
-        return get_cash_session_summary(db=db, session_id=session.id)
+        return get_cash_session_summary(
+            db=db,
+            session_id=session.id,
+            payment_method_id=payment_method_id,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -90,15 +95,20 @@ def close_session(
 # Admin: todas las sesiones   |   Vendedor: solo las propias
 @router.get("/history", response_model=List[CashSessionWithUserResponse])
 def get_history(
+    payment_method_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     role_name = current_user.role.name if current_user.role else ""
 
     if role_name == "admin":
-        sessions = get_cash_sessions(db=db)
+        sessions = get_cash_sessions(db=db, payment_method_id=payment_method_id)
     else:
-        sessions = get_cash_sesions_by_user(db=db, user_id=current_user.id)
+        sessions = get_cash_sesions_by_user(
+            db=db,
+            user_id=current_user.id,
+            payment_method_id=payment_method_id,
+        )
 
     result = []
     for s in sessions:

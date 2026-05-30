@@ -96,11 +96,25 @@ def create_order_db_record(
         raise e
 
 
-def get_order(db: Session, skip: int = 0, limit: int = 100, user_id: int = None):
-    query = db.query(Order).options(joinedload(Order.client))
+def get_order(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    user_id: int = None,
+    payment_method_id: int = None,
+):
+    query = db.query(Order).options(
+        joinedload(Order.client),
+        joinedload(Order.order_items_order).joinedload(OrderItem.product),
+        joinedload(Order.payment_order).joinedload(Payment.payment_method),
+    )
     if user_id is not None:
         query = query.filter(Order.user_id == user_id)
-    return query.order_by(Order.id).offset(skip).limit(limit).all()
+    if payment_method_id is not None:
+        query = query.join(Payment, Payment.order_id == Order.id).filter(
+            Payment.id_payment_method == payment_method_id
+        )
+    return query.order_by(Order.id.desc()).offset(skip).limit(limit).all()
 
 
 def update_order_db_record(db: Session, order_id: int, order_data: OrderUpdate, user_id: int):

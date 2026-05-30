@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import { AlertCircle, Clock, Loader2, User } from 'lucide-react';
@@ -19,19 +19,21 @@ import { CloseSessionForm } from '../components/CloseSessionForm';
 import { SessionSummaryCards } from '../components/SessionSummaryCards';
 import { SessionHistoryTable } from '../components/SessionHistoryTable';
 import { SessionStatusBadge } from '../components/SessionStatusBadge';
+import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
 
 const MySwal = withReactContent(Swal);
 
 const CashSessionPage = () => {
     const user = useAuthStore((s) => s.user);
+    const [paymentMethodId, setPaymentMethodId] = useState('');
 
     // ─── Queries ────────────────────────────────────────────────────────────
     const activeSessionQuery = useActiveSession();
     const activeSession = activeSessionQuery.data;
     const hasSession = Boolean(activeSession);
 
-    const summaryQuery = useSessionSummary(hasSession);
-    const historyQuery = useSessionHistory();
+    const summaryQuery = useSessionSummary(hasSession, { payment_method_id: paymentMethodId });
+    const historyQuery = useSessionHistory({ payment_method_id: paymentMethodId });
 
     // ─── Mutations ──────────────────────────────────────────────────────────
     const openMutation = useOpenSession();
@@ -140,6 +142,15 @@ const CashSessionPage = () => {
                     )
                 }
             />
+
+            <Card className="p-4">
+                <div className="max-w-xs space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Metodo de pago
+                    </p>
+                    <PaymentMethodFilter value={paymentMethodId} onChange={setPaymentMethodId} />
+                </div>
+            </Card>
 
             {/* ─── Caja actual ─────────────────────────────────────────── */}
             {hasSession && (
