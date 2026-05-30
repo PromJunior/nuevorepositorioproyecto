@@ -9,6 +9,7 @@ from schemas.dashboard_schema import (
     DashboardSummary,
     TopProduct,
     TopClient,
+    ClientSegmentationPoint,
     RecentSale,
     RecentPurchase,
     SalesChartPoint,
@@ -64,6 +65,18 @@ def top_clients(
     is_admin = (get_user_role_name(current_user) or "").lower() == "admin"
     effective_user_id = user_id if is_admin else current_user.id
     return dashboard_crud.get_top_clients(db=db, limit=limit, payment_method_id=payment_method_id, user_id=effective_user_id)
+
+
+@router.get("/client-segmentation", response_model=List[ClientSegmentationPoint])
+def client_segmentation(
+    payment_method_id: int | None = None,
+    user_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    is_admin = (get_user_role_name(current_user) or "").lower() == "admin"
+    effective_user_id = user_id if is_admin else current_user.id
+    return dashboard_crud.get_client_segmentation(db=db, payment_method_id=payment_method_id, user_id=effective_user_id)
 
 
 # ─── Ventas recientes ─────────────────────────────────────────────────────────

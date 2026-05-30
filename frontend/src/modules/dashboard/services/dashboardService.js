@@ -24,6 +24,11 @@ export const dashboardService = {
         return response.data;
     },
 
+    getClientSegmentation: async (params = {}) => {
+        const response = await apiClient.get('/dashboard/client-segmentation', { params });
+        return response.data;
+    },
+
     /** Últimas N ventas con cliente, vendedor y método de pago */
     getRecentSales: async (limit = 10, params = {}) => {
         const response = await apiClient.get('/dashboard/recent-sales', { params: { limit, ...params } });

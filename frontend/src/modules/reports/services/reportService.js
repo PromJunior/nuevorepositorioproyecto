@@ -95,6 +95,35 @@ const getCashReport = async (filters = {}) => {
     return response.data;
 };
 
+const getCrmReport = async (filters = {}) => {
+    const response = await apiClient.get('/reports/crm', { params: clean(filters) });
+    return response.data;
+};
+
+const exportCrmExcel = async (filters = {}) => {
+    const response = await apiClient.get('/reports/crm/export/excel', {
+        params: clean(filters),
+        responseType: 'blob',
+    });
+    downloadBlob(response.data, `crm_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
+const exportCrmPdf = async (filters = {}) => {
+    const response = await apiClient.get('/reports/crm/export/pdf', {
+        params: clean(filters),
+        responseType: 'blob',
+    });
+    downloadBlob(response.data, `crm_${new Date().toISOString().slice(0, 10)}.pdf`);
+};
+
+const exportCrmCsv = async (filters = {}) => {
+    const response = await apiClient.get('/reports/crm/export/csv', {
+        params: clean(filters),
+        responseType: 'blob',
+    });
+    downloadBlob(response.data, `crm_${new Date().toISOString().slice(0, 10)}.csv`);
+};
+
 const exportCashExcel = async (filters = {}) => {
     const response = await apiClient.get('/reports/cash/export/excel', {
         params: clean(filters),
@@ -130,5 +159,9 @@ export const reportService = {
     getCashReport,
     exportCashExcel,
     exportCashPdf,
+    getCrmReport,
+    exportCrmExcel,
+    exportCrmPdf,
+    exportCrmCsv,
     getAuditLogs,
 };

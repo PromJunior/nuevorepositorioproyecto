@@ -18,6 +18,7 @@ from models.model import (
     CashSession,
     User,
 )
+from crud.crm_crud import get_crm_summary, get_client_segment_stats
 
 PERU_TZ = pytz.timezone("America/Lima")
 
@@ -116,6 +117,7 @@ def get_dashboard_summary(
         or 0
     )
     total_suppliers = db.query(func.count(Supplier.id)).scalar() or 0
+    crm_summary = get_crm_summary(db, payment_method_id=payment_method_id, user_id=user_id)
 
     # ─ Sesión de caja activa
     open_session = (
@@ -148,6 +150,9 @@ def get_dashboard_summary(
         "low_stock_count": inv["low_stock_count"],
         "total_clients": total_clients,
         "clients_new_this_month": clients_new_this_month,
+        "clients_vip": crm_summary["vip_clients"],
+        "clients_frequent": crm_summary["frequent_clients"],
+        "clients_inactive": crm_summary["inactive_clients"],
         "total_suppliers": total_suppliers,
         "has_open_session": has_open,
         "open_session_expected": open_expected,
@@ -188,6 +193,14 @@ def get_top_products(
         }
         for r in rows
     ]
+
+
+def get_client_segmentation(
+    db: Session,
+    payment_method_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> list:
+    return get_client_segment_stats(db, payment_method_id=payment_method_id, user_id=user_id)
 
 
 # ─── Top clientes por gasto ───────────────────────────────────────────────────

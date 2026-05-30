@@ -49,6 +49,18 @@ export const ExportButtons = ({ reportType, filters = {}, disabled = false }) =>
                 )}
                 PDF
             </Button>
+            {reportType === 'crm' && (
+                <Button
+                    variant="secondary"
+                    className="text-xs gap-1.5 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                    onClick={() => handleExport('csv')}
+                    disabled={disabled || isLoading}
+                    title="Descargar CSV"
+                >
+                    {isLoading ? <Loader2 size={14} className="animate-spin" /> : <FileSpreadsheet size={14} />}
+                    CSV
+                </Button>
+            )}
         </div>
     );
 };

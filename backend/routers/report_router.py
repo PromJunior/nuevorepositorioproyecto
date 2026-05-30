@@ -11,6 +11,7 @@ from schemas.report_schema import (
     SalesReportRow, PurchasesReportRow,
     KardexReportRow, KardexDailySummaryRow, CashReportRow, AuditLogRow,
 )
+from schemas.client_schema import ClientCrmRow
 from crud import report_crud
 
 router = APIRouter(tags=["Reports / Exportaciones"])
@@ -29,6 +30,14 @@ def _pdf_response(buffer, filename: str) -> StreamingResponse:
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+def _csv_response(buffer, filename: str) -> StreamingResponse:
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
 
@@ -339,6 +348,100 @@ def export_cash_pdf(
         limit=2000,
     )
     return _pdf_response(report_crud.generate_cash_pdf(rows), "reporte_caja.pdf")
+
+
+# CRM
+@router.get("/reports/crm", response_model=List[ClientCrmRow])
+def crm_report(
+    segment: Optional[str] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    user_id: Optional[int] = None,
+    payment_method_id: Optional[int] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(200, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    is_admin = (get_user_role_name(current_user) or "").lower() == "admin"
+    effective_user_id = user_id if is_admin else current_user.id
+    _, rows = report_crud.get_crm_report(
+        db,
+        segment=segment,
+        date_from=date_from,
+        date_to=date_to,
+        user_id=effective_user_id,
+        payment_method_id=payment_method_id,
+        skip=skip,
+        limit=limit,
+    )
+    return rows
+
+
+@router.get("/reports/crm/export/excel")
+def export_crm_excel(
+    segment: Optional[str] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    user_id: Optional[int] = None,
+    payment_method_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_admin_user),
+):
+    _, rows = report_crud.get_crm_report(
+        db,
+        segment=segment,
+        date_from=date_from,
+        date_to=date_to,
+        user_id=user_id,
+        payment_method_id=payment_method_id,
+        limit=5000,
+    )
+    return _excel_response(report_crud.generate_crm_excel(rows), "reporte_crm.xlsx")
+
+
+@router.get("/reports/crm/export/pdf")
+def export_crm_pdf(
+    segment: Optional[str] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    user_id: Optional[int] = None,
+    payment_method_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_admin_user),
+):
+    _, rows = report_crud.get_crm_report(
+        db,
+        segment=segment,
+        date_from=date_from,
+        date_to=date_to,
+        user_id=user_id,
+        payment_method_id=payment_method_id,
+        limit=2000,
+    )
+    return _pdf_response(report_crud.generate_crm_pdf(rows), "reporte_crm.pdf")
+
+
+@router.get("/reports/crm/export/csv")
+def export_crm_csv(
+    segment: Optional[str] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    user_id: Optional[int] = None,
+    payment_method_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_admin_user),
+):
+    _, rows = report_crud.get_crm_report(
+        db,
+        segment=segment,
+        date_from=date_from,
+        date_to=date_to,
+        user_id=user_id,
+        payment_method_id=payment_method_id,
+        limit=5000,
+    )
+    return _csv_response(report_crud.generate_crm_csv(rows), "reporte_crm.csv")
 
 
 # ══════════════════════════════════════════════════════════════

@@ -5,6 +5,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
 
 from models.model import Client, Order, Payment, User
+from crud.crm_crud import classify_client, get_crm_summary
 
 def get_client_by_dni(db:Session ,dni: str):
     return db.query(Client).filter(Client.dni == dni).first()
@@ -72,30 +73,21 @@ def get_client_stats(db: Session, client_id: int):
     )
 
     total_amount_decimal = Decimal(str(total_amount or 0))
+    recency_days = (datetime.utcnow() - last_purchase).days if last_purchase else None
+    segment = classify_client(int(total_orders or 0), total_amount_decimal, last_purchase)
     return {
         "total_purchases": total_amount_decimal,
         "total_amount": total_amount_decimal,
         "last_purchase": last_purchase,
         "orders_count": int(total_orders or 0),
+        "recency_days": recency_days,
+        "frequency": int(total_orders or 0),
+        "monetary": total_amount_decimal,
+        "segment": segment,
     }
 
 def get_clients_crm_summary(db: Session):
-    now = datetime.utcnow()
-    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-    frequent_clients = (
-        db.query(Order.client_id)
-        .filter(Order.client_id.isnot(None))
-        .group_by(Order.client_id)
-        .having(func.count(Order.id) >= 3)
-        .count()
-    )
-
-    return {
-        "registered_clients": db.query(func.count(Client.id)).scalar() or 0,
-        "active_clients": db.query(func.count(Client.id)).filter(Client.is_active == True).scalar() or 0,
-        "frequent_clients": frequent_clients,
-        "new_clients_this_month": db.query(func.count(Client.id)).filter(Client.create_at >= month_start).scalar() or 0,
-    }
+    return get_crm_summary(db)
 
 def get_client_purchase_history(
     db: Session,

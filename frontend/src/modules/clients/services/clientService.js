@@ -31,6 +31,21 @@ export const clientService = {
         return response.data;
     },
 
+    getCrmClients: async (params = {}) => {
+        const response = await apiClient.get('/clients/crm/list', { params });
+        return response.data;
+    },
+
+    getCrmSegments: async (params = {}) => {
+        const response = await apiClient.get('/clients/crm/segments', { params });
+        return response.data;
+    },
+
+    getCrmRanking: async (params = {}) => {
+        const response = await apiClient.get('/clients/crm/ranking', { params });
+        return response.data;
+    },
+
     updateClient: async (id, clientData) => {
         const response = await apiClient.put(`/clients/${id}`, clientData);
         return response.data;
@@ -48,6 +63,31 @@ export const clientService = {
 
     getClientPurchaseHistory: async (id, params = {}) => {
         const response = await apiClient.get(`/clients/${id}/purchase-history`, { params });
+        return response.data;
+    },
+
+    getClientNotes: async (id) => {
+        const response = await apiClient.get(`/clients/${id}/notes`);
+        return response.data;
+    },
+
+    createClientNote: async (id, data) => {
+        const response = await apiClient.post(`/clients/${id}/notes`, data);
+        return response.data;
+    },
+
+    getClientFollowUps: async (id) => {
+        const response = await apiClient.get(`/clients/${id}/follow-ups`);
+        return response.data;
+    },
+
+    createClientFollowUp: async (id, data) => {
+        const response = await apiClient.post(`/clients/${id}/follow-ups`, data);
+        return response.data;
+    },
+
+    updateClientFollowUp: async (id, data) => {
+        const response = await apiClient.put(`/clients/follow-ups/${id}`, data);
         return response.data;
     },
 };

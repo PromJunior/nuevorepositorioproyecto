@@ -1,7 +1,7 @@
 import React from 'react';
-import { CalendarClock, Receipt, TrendingUp, Users } from 'lucide-react';
+import { CalendarClock, Crown, Receipt, TrendingUp, UserX, Users } from 'lucide-react';
 import { Card } from '../../../shared/components/ui/card';
-import { formatCurrency, formatDateTime, formatNumber } from '../../../shared/utils/formatters';
+import { formatCurrency, formatNumber } from '../../../shared/utils/formatters';
 
 const StatCard = ({ icon, label, value, sub }) => {
     const IconComponent = icon;
@@ -24,20 +24,20 @@ export const ClientStatsCards = ({ stats, summary }) => {
     if (summary) {
         return (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                <StatCard icon={Users} label="Clientes registrados" value={formatNumber(summary.total)} />
-                <StatCard icon={Users} label="Clientes activos" value={formatNumber(summary.active)} />
-                <StatCard icon={TrendingUp} label="Clientes frecuentes" value={formatNumber(summary.frequent)} sub="3 o mas ordenes" />
-                <StatCard icon={CalendarClock} label="Clientes nuevos mes" value={formatNumber(summary.newThisMonth)} />
+                <StatCard icon={Crown} label="Clientes VIP" value={formatNumber(summary.vip)} />
+                <StatCard icon={TrendingUp} label="Clientes frecuentes" value={formatNumber(summary.frequent)} />
+                <StatCard icon={CalendarClock} label="Clientes nuevos" value={formatNumber(summary.newClients)} />
+                <StatCard icon={UserX} label="Clientes inactivos" value={formatNumber(summary.inactive)} />
             </div>
         );
     }
 
     return (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <StatCard icon={TrendingUp} label="Total compras" value={formatCurrency(stats?.total_purchases, 'PEN')} />
-            <StatCard icon={Receipt} label="Monto acumulado" value={formatCurrency(stats?.total_amount, 'PEN')} />
-            <StatCard icon={CalendarClock} label="Ultima compra" value={formatDateTime(stats?.last_purchase)} />
-            <StatCard icon={Receipt} label="Cantidad ordenes" value={formatNumber(stats?.orders_count)} />
+            <StatCard icon={TrendingUp} label="Segmento" value={stats?.segment || 'Nuevo'} />
+            <StatCard icon={CalendarClock} label="Recency" value={stats?.recency_days == null ? '-' : `${stats.recency_days} dias`} />
+            <StatCard icon={Receipt} label="Frecuencia" value={formatNumber(stats?.frequency ?? stats?.orders_count)} />
+            <StatCard icon={Users} label="Monetary" value={formatCurrency(stats?.monetary ?? stats?.total_amount, 'PEN')} />
         </div>
     );
 };

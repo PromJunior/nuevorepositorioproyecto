@@ -5,9 +5,14 @@ export const clientKeys = {
     all: ['clients'],
     list: (params = {}) => ['clients', 'list', params],
     summary: ['clients', 'summary'],
+    crmList: (params = {}) => ['clients', 'crm-list', params],
+    segments: (params = {}) => ['clients', 'segments', params],
+    ranking: (params = {}) => ['clients', 'ranking', params],
     detail: (id) => ['clients', 'detail', id],
     stats: (id) => ['clients', 'stats', id],
     history: (id, params = {}) => ['clients', 'history', id, params],
+    notes: (id) => ['clients', 'notes', id],
+    followUps: (id) => ['clients', 'follow-ups', id],
 };
 
 export const useClients = (params = {}) =>
@@ -32,6 +37,27 @@ export const useClientsSummary = () =>
         staleTime: 1000 * 60 * 2,
     });
 
+export const useCrmClients = (params = {}) =>
+    useQuery({
+        queryKey: clientKeys.crmList(params),
+        queryFn: () => clientService.getCrmClients(params),
+        staleTime: 1000 * 60 * 2,
+    });
+
+export const useCrmSegments = (params = {}) =>
+    useQuery({
+        queryKey: clientKeys.segments(params),
+        queryFn: () => clientService.getCrmSegments(params),
+        staleTime: 1000 * 60 * 2,
+    });
+
+export const useCrmRanking = (params = {}) =>
+    useQuery({
+        queryKey: clientKeys.ranking(params),
+        queryFn: () => clientService.getCrmRanking(params),
+        staleTime: 1000 * 60 * 2,
+    });
+
 export const useClientStats = (id) =>
     useQuery({
         queryKey: clientKeys.stats(id),
@@ -46,6 +72,22 @@ export const useClientPurchaseHistory = (id, params = {}) =>
         queryFn: () => clientService.getClientPurchaseHistory(id, params),
         enabled: Boolean(id),
         staleTime: 1000 * 60,
+    });
+
+export const useClientNotes = (id) =>
+    useQuery({
+        queryKey: clientKeys.notes(id),
+        queryFn: () => clientService.getClientNotes(id),
+        enabled: Boolean(id),
+        staleTime: 1000 * 30,
+    });
+
+export const useClientFollowUps = (id) =>
+    useQuery({
+        queryKey: clientKeys.followUps(id),
+        queryFn: () => clientService.getClientFollowUps(id),
+        enabled: Boolean(id),
+        staleTime: 1000 * 30,
     });
 
 export const useCreateClient = () => {
@@ -90,3 +132,30 @@ export const useSearchClientByDni = () =>
     useMutation({
         mutationFn: clientService.getClientByDni,
     });
+
+export const useCreateClientNote = (clientId) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (data) => clientService.createClientNote(clientId, data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: clientKeys.notes(clientId) }),
+    });
+};
+
+export const useCreateClientFollowUp = (clientId) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (data) => clientService.createClientFollowUp(clientId, data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: clientKeys.followUps(clientId) }),
+    });
+};
+
+export const useUpdateClientFollowUp = (clientId) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, data }) => clientService.updateClientFollowUp(id, data),
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: clientKeys.followUps(clientId) }),
+    });
+};

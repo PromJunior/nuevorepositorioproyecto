@@ -9,7 +9,18 @@ import { ROUTES } from '../../../constants/routes';
 import { formatDateTime } from '../../../shared/utils/formatters';
 import { ClientPurchaseHistory } from '../components/ClientPurchaseHistory';
 import { ClientStatsCards } from '../components/ClientStatsCards';
-import { useClient, useClientPurchaseHistory, useClientStats } from '../hooks/useClients';
+import { ClientNotesPanel } from '../components/ClientNotesPanel';
+import { ClientFollowUpPanel } from '../components/ClientFollowUpPanel';
+import {
+    useClient,
+    useClientFollowUps,
+    useClientNotes,
+    useClientPurchaseHistory,
+    useClientStats,
+    useCreateClientFollowUp,
+    useCreateClientNote,
+    useUpdateClientFollowUp,
+} from '../hooks/useClients';
 import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
 
 const PAGE_SIZE = 10;
@@ -43,6 +54,11 @@ const ClientDetailPage = () => {
     const clientQuery = useClient(id);
     const statsQuery = useClientStats(id);
     const historyQuery = useClientPurchaseHistory(id, historyParams);
+    const notesQuery = useClientNotes(id);
+    const followUpsQuery = useClientFollowUps(id);
+    const createNote = useCreateClientNote(id);
+    const createFollowUp = useCreateClientFollowUp(id);
+    const updateFollowUp = useUpdateClientFollowUp(id);
 
     return (
         <div className="min-h-screen space-y-6 bg-slate-50/40 p-6">
@@ -94,6 +110,20 @@ const ClientDetailPage = () => {
                         >
                             <ClientStatsCards stats={statsQuery.data} />
                         </DataState>
+
+                        <div className="grid gap-6 xl:grid-cols-2">
+                            <ClientNotesPanel
+                                notes={notesQuery.data || []}
+                                onCreate={(data) => createNote.mutateAsync(data)}
+                                isSaving={createNote.isPending}
+                            />
+                            <ClientFollowUpPanel
+                                followUps={followUpsQuery.data || []}
+                                onCreate={(data) => createFollowUp.mutateAsync(data)}
+                                onUpdate={(payload) => updateFollowUp.mutateAsync(payload)}
+                                isSaving={createFollowUp.isPending || updateFollowUp.isPending}
+                            />
+                        </div>
 
                         <Card className="p-5">
                             <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

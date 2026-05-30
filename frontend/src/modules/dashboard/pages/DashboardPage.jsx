@@ -17,6 +17,7 @@ import { SalesChart } from '../components/SalesChart';
 import { PaymentMethodsChart } from '../components/PaymentMethodsChart';
 import { TopProductsTable } from '../components/TopProductsTable';
 import { TopClientsTable } from '../components/TopClientsTable';
+import { ClientSegmentationChart } from '../components/ClientSegmentationChart';
 import { RecentSalesTable } from '../components/RecentSalesTable';
 import { RecentPurchasesTable } from '../components/RecentPurchasesTable';
 import { LowStockTable } from '../components/LowStockTable';
@@ -108,6 +109,10 @@ const DashboardPage = () => {
             {/* ─── Top productos + Top clientes ───────────────────── */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
                 <TopProductsTable filters={dashboardFilters} />
+                <ClientSegmentationChart filters={dashboardFilters} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
                 <TopClientsTable filters={dashboardFilters} />
             </div>
 

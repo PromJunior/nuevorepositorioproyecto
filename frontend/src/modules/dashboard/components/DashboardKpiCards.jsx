@@ -1,7 +1,7 @@
 import React from 'react';
 import {
-    AlertTriangle, Building2, DollarSign, Package,
-    Receipt, ShoppingBag, TrendingUp, Users, Wallet,
+    AlertTriangle, Building2, Crown, DollarSign, Package,
+    Receipt, ShoppingBag, TrendingUp, Users, UserX, Wallet,
 } from 'lucide-react';
 import { Card } from '../../../shared/components/ui/card';
 import { formatCurrency, formatNumber } from '../../../shared/utils/formatters';
@@ -95,6 +95,20 @@ export const DashboardKpiCards = ({ summary }) => {
                 label="Clientes registrados"
                 value={formatNumber(summary.total_clients)}
                 sub={`${formatNumber(summary.clients_new_this_month)} nuevos este mes`}
+                tone="slate"
+            />
+            <KpiCard
+                icon={Crown}
+                label="Clientes VIP"
+                value={formatNumber(summary.clients_vip ?? 0)}
+                sub={`${formatNumber(summary.clients_frequent ?? 0)} frecuentes`}
+                tone="amber"
+            />
+            <KpiCard
+                icon={UserX}
+                label="Clientes inactivos"
+                value={formatNumber(summary.clients_inactive ?? 0)}
+                sub="Sin compra reciente"
                 tone="slate"
             />
             <KpiCard

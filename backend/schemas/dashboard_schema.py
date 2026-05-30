@@ -23,6 +23,9 @@ class DashboardSummary(BaseModel):
     # Entidades
     total_clients: int
     clients_new_this_month: int
+    clients_vip: int = 0
+    clients_frequent: int = 0
+    clients_inactive: int = 0
     total_suppliers: int
     # Caja
     has_open_session: bool
@@ -45,6 +48,13 @@ class TopClient(BaseModel):
     client_name: str
     total_orders: int
     total_spent: Decimal
+
+    model_config = ConfigDict(from_attributes=False)
+
+
+class ClientSegmentationPoint(BaseModel):
+    segment: str
+    count: int
 
     model_config = ConfigDict(from_attributes=False)
 

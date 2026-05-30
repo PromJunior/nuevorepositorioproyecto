@@ -8,6 +8,7 @@ const reportKeys = {
     purchases: (f) => ['reports', 'purchases', f],
     kardex:    (f) => ['reports', 'kardex', f],
     cash:      (f) => ['reports', 'cash', f],
+    crm:       (f) => ['reports', 'crm', f],
     audit:     (f) => ['reports', 'audit', f],
 };
 
@@ -41,6 +42,13 @@ export const useCashReport = (filters = {}) =>
         staleTime: FIVE_MIN,
     });
 
+export const useCrmReport = (filters = {}) =>
+    useQuery({
+        queryKey: reportKeys.crm(filters),
+        queryFn: () => reportService.getCrmReport(filters),
+        staleTime: FIVE_MIN,
+    });
+
 export const useAuditLogs = (filters = {}) =>
     useQuery({
         queryKey: reportKeys.audit(filters),
@@ -61,6 +69,9 @@ export const useExportReport = () =>
                 'kardex-pdf':      () => reportService.exportKardexPdf(filters),
                 'cash-excel':      () => reportService.exportCashExcel(filters),
                 'cash-pdf':        () => reportService.exportCashPdf(filters),
+                'crm-excel':       () => reportService.exportCrmExcel(filters),
+                'crm-pdf':         () => reportService.exportCrmPdf(filters),
+                'crm-csv':         () => reportService.exportCrmCsv(filters),
             };
             const key = `${type}-${format}`;
             if (!map[key]) throw new Error(`Export no soportado: ${key}`);

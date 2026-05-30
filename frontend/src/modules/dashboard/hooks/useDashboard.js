@@ -6,6 +6,7 @@ export const dashboardKeys = {
     summary: (params = {}) => ['dashboard', 'summary', params],
     topProducts: (limit, params = {}) => ['dashboard', 'top-products', limit, params],
     topClients: (limit, params = {}) => ['dashboard', 'top-clients', limit, params],
+    clientSegmentation: (params = {}) => ['dashboard', 'client-segmentation', params],
     recentSales: (limit, params = {}) => ['dashboard', 'recent-sales', limit, params],
     recentPurchases: (limit) => ['dashboard', 'recent-purchases', limit],
     salesChart: (days, params = {}) => ['dashboard', 'sales-chart', days, params],
@@ -40,6 +41,13 @@ export const useTopClients = (limit = 8, params = {}) =>
     useQuery({
         queryKey: dashboardKeys.topClients(limit, clean(params)),
         queryFn: () => dashboardService.getTopClients(limit, clean(params)),
+        staleTime: FIVE_MIN,
+    });
+
+export const useClientSegmentation = (params = {}) =>
+    useQuery({
+        queryKey: dashboardKeys.clientSegmentation(clean(params)),
+        queryFn: () => dashboardService.getClientSegmentation(clean(params)),
         staleTime: FIVE_MIN,
     });
 

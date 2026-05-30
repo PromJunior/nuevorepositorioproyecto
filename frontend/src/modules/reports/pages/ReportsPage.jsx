@@ -12,9 +12,10 @@ import { ReportFilters } from '../components/ReportFilters';
 import { ExportButtons } from '../components/ExportButtons';
 import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
 import { UserFilter } from '../../../shared/components/UserFilter';
+import { ClientSegmentBadge } from '../../clients/components/ClientSegmentBadge';
 import {
     useSalesReport, usePurchasesReport,
-    useKardexReport, useCashReport, useAuditLogs,
+    useKardexReport, useCashReport, useCrmReport, useAuditLogs,
 } from '../hooks/useReports';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -402,11 +403,87 @@ const AuditTab = () => {
 };
 
 // ─── PÁGINA PRINCIPAL ─────────────────────────────────────────────────────────
+const CrmTab = () => {
+    const { filters, onChange, onReset } = useTabFilters();
+    const [page, setPage] = useState(1);
+    const { data = [], isLoading, isError } = useCrmReport({
+        ...filters,
+        skip: (page - 1) * PAGE_SIZE,
+        limit: PAGE_SIZE,
+    });
+    const totalPages = data.length === PAGE_SIZE ? page + 1 : page;
+
+    return (
+        <div className="space-y-4">
+            <ReportFilters
+                filters={filters}
+                onFilterChange={onChange}
+                onReset={onReset}
+                extraSlot={
+                    <>
+                        <div className="space-y-1">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Segmento</label>
+                            <select
+                                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500"
+                                value={filters.segment || ''}
+                                onChange={(e) => onChange('segment', e.target.value)}
+                            >
+                                <option value="">Todos</option>
+                                <option value="VIP">VIP</option>
+                                <option value="Frecuente">Frecuente</option>
+                                <option value="Ocasional">Ocasional</option>
+                                <option value="Inactivo">Inactivo</option>
+                                <option value="Nuevo">Nuevo</option>
+                            </select>
+                        </div>
+                        <div className="space-y-1">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Usuario / Vendedor</label>
+                            <UserFilter value={filters.user_id || ''} onChange={(value) => onChange('user_id', value)} />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Metodo de pago</label>
+                            <PaymentMethodFilter value={filters.payment_method_id || ''} onChange={(value) => onChange('payment_method_id', value)} />
+                        </div>
+                    </>
+                }
+            />
+            <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-400">{data.length} registros</span>
+                <div className="flex items-center gap-3">
+                    <ExportButtons reportType="crm" filters={filters} disabled={data.length === 0} />
+                    <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                </div>
+            </div>
+            <DataState isLoading={isLoading} isError={isError} isEmpty={!isLoading && data.length === 0}
+                loadingLabel="Cargando CRM..." emptyTitle="Sin clientes">
+                <TableWrapper>
+                    <thead><tr className="border-b border-slate-100 bg-slate-50/70">
+                        <TH>Cliente</TH><TH>Segmento</TH><TH>Recency</TH><TH>Frecuencia</TH><TH right>Monetary</TH><TH>Ultima compra</TH>
+                    </tr></thead>
+                    <tbody className="divide-y divide-slate-100">
+                        {data.map((r) => (
+                            <tr key={r.id} className="hover:bg-slate-50/60">
+                                <TD><span className="font-black text-slate-900">{r.full_name}</span><span className="block text-xs text-slate-400">{r.dni}</span></TD>
+                                <TD><ClientSegmentBadge segment={r.segment} /></TD>
+                                <TD mono>{r.recency_days == null ? '—' : `${r.recency_days} d`}</TD>
+                                <TD mono>{formatNumber(r.frequency)}</TD>
+                                <TD mono right><span className="font-black text-slate-900">{formatCurrency(r.monetary, 'PEN')}</span></TD>
+                                <TD dim>{formatDateTime(r.last_purchase)}</TD>
+                            </tr>
+                        ))}
+                    </tbody>
+                </TableWrapper>
+            </DataState>
+        </div>
+    );
+};
+
 const TABS = [
     { id: 'sales',     label: 'Ventas',     Component: SalesTab },
     { id: 'purchases', label: 'Compras',    Component: PurchasesTab },
     { id: 'kardex',    label: 'Kardex',     Component: KardexTab },
     { id: 'cash',      label: 'Caja',       Component: CashTab },
+    { id: 'crm',       label: 'CRM',        Component: CrmTab },
     { id: 'audit',     label: 'Auditoría',  Component: AuditTab, adminOnly: true },
 ];
 

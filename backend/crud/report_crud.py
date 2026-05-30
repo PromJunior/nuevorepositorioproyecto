@@ -4,8 +4,9 @@ Todas las queries son independientes para no mezclar lógica de dominio.
 """
 from decimal import Decimal
 from datetime import datetime, date
-from io import BytesIO
+from io import BytesIO, StringIO
 from typing import Optional
+import csv
 
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import Date, func
@@ -16,6 +17,7 @@ from models.model import (
     InventoryTransaction, InventoryTransactionType, Product,
     CashSession, User, AuditLog,
 )
+from crud.crm_crud import get_client_crm_rows
 
 
 # ─── Helpers de fecha ─────────────────────────────────────────────────────────
@@ -368,6 +370,28 @@ def get_audit_logs(
     ]
 
 
+def get_crm_report(
+    db: Session,
+    segment: Optional[str] = None,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    user_id: Optional[int] = None,
+    payment_method_id: Optional[int] = None,
+    skip: int = 0,
+    limit: int = 500,
+) -> tuple[int, list]:
+    return get_client_crm_rows(
+        db,
+        segment=segment,
+        date_from=date_from,
+        date_to=date_to,
+        user_id=user_id,
+        payment_method_id=payment_method_id,
+        skip=skip,
+        limit=limit,
+    )
+
+
 def log_action(
     db: Session,
     user_id: Optional[int],
@@ -565,6 +589,54 @@ def generate_cash_excel(rows: list) -> BytesIO:
     return output
 
 
+def generate_crm_excel(rows: list) -> BytesIO:
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "CRM Clientes"
+    headers = ["ID", "DNI", "Cliente", "Email", "Telefono", "Segmento", "Recency", "Frecuencia", "Monetary", "Ultima compra"]
+    widths = [8, 14, 30, 30, 16, 14, 10, 12, 14, 18]
+    _style_header(ws, headers, widths)
+    for r in rows:
+        ws.append([
+            r["id"],
+            r["dni"],
+            r["full_name"],
+            r["email"],
+            r.get("phone") or "",
+            r["segment"],
+            r.get("recency_days") if r.get("recency_days") is not None else "",
+            r["frequency"],
+            float(r["monetary"]),
+            r["last_purchase"].strftime("%d/%m/%Y") if r.get("last_purchase") else "",
+        ])
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
+
+def generate_crm_csv(rows: list) -> StringIO:
+    output = StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["ID", "DNI", "Cliente", "Email", "Telefono", "Segmento", "Recency", "Frecuencia", "Monetary", "Ultima compra"])
+    for r in rows:
+        writer.writerow([
+            r["id"],
+            r["dni"],
+            r["full_name"],
+            r["email"],
+            r.get("phone") or "",
+            r["segment"],
+            r.get("recency_days") if r.get("recency_days") is not None else "",
+            r["frequency"],
+            float(r["monetary"]),
+            r["last_purchase"].strftime("%d/%m/%Y") if r.get("last_purchase") else "",
+        ])
+    output.seek(0)
+    return output
+
+
 # ─── GENERADORES PDF ──────────────────────────────────────────────────────────
 def _build_pdf(
     title: str,
@@ -726,3 +798,19 @@ def generate_cash_pdf(rows: list) -> BytesIO:
         for r in rows
     ]
     return _build_pdf("Reporte de Caja", headers, data)
+
+
+def generate_crm_pdf(rows: list) -> BytesIO:
+    headers = ["Cliente", "Segmento", "R", "F", "M", "Ultima compra"]
+    data = [
+        [
+            r["full_name"][:28],
+            r["segment"],
+            r.get("recency_days") if r.get("recency_days") is not None else "",
+            r["frequency"],
+            f"S/. {float(r['monetary']):.2f}",
+            r["last_purchase"].strftime("%d/%m/%Y") if r.get("last_purchase") else "",
+        ]
+        for r in rows
+    ]
+    return _build_pdf("Reporte CRM Clientes", headers, data)

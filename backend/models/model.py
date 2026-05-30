@@ -311,6 +311,37 @@ class Client(Base):
     
     # Relaciones existentes
     orders = relationship("Order", back_populates="client")
+    notes = relationship("ClientNote", back_populates="client", cascade="all, delete-orphan")
+    follow_ups = relationship("ClientFollowUp", back_populates="client", cascade="all, delete-orphan")
+
+
+class ClientNote(Base):
+    __tablename__ = "client_notes"
+
+    id = Column(Integer, autoincrement=True, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    note = Column(String(500), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    client = relationship("Client", back_populates="notes")
+    user = relationship("User")
+
+
+class ClientFollowUp(Base):
+    __tablename__ = "client_follow_ups"
+
+    id = Column(Integer, autoincrement=True, primary_key=True, index=True)
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    next_contact_at = Column(DateTime, nullable=False)
+    status = Column(String(20), nullable=False, default="PENDIENTE")
+    comment = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow)
+
+    client = relationship("Client", back_populates="follow_ups")
+    user = relationship("User")
 
 
 #-----------------------> MODELO DE AUDITORÍA DEL SISTEMA <------------------------

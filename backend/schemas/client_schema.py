@@ -49,6 +49,10 @@ class ClientStats(BaseModel):
     total_amount: Decimal
     last_purchase: Optional[datetime] = None
     orders_count: int
+    recency_days: Optional[int] = None
+    frequency: int = 0
+    monetary: Decimal = Decimal("0.00")
+    segment: str = "Nuevo"
 
 
 class ClientCrmSummary(BaseModel):
@@ -56,6 +60,9 @@ class ClientCrmSummary(BaseModel):
     active_clients: int
     frequent_clients: int
     new_clients_this_month: int
+    vip_clients: int = 0
+    inactive_clients: int = 0
+    new_clients: int = 0
 
 
 class ClientPurchaseHistoryItem(BaseModel):
@@ -72,3 +79,60 @@ class ClientPurchaseHistoryResponse(BaseModel):
     total: int
     skip: int
     limit: int
+
+
+class ClientCrmRow(BaseModel):
+    id: int
+    dni: str
+    full_name: str
+    email: str
+    phone: Optional[str] = None
+    is_active: bool
+    create_at: Optional[datetime] = None
+    orders_count: int
+    total_amount: Decimal
+    last_purchase: Optional[datetime] = None
+    recency_days: Optional[int] = None
+    frequency: int
+    monetary: Decimal
+    segment: str
+
+
+class ClientSegmentStat(BaseModel):
+    segment: str
+    count: int
+
+
+class ClientNoteCreate(BaseModel):
+    note: str = Field(..., min_length=1, max_length=500)
+
+
+class ClientNoteResponse(BaseModel):
+    id: int
+    client_id: int
+    note: str
+    username: Optional[str] = None
+    created_at: datetime
+
+
+class ClientFollowUpCreate(BaseModel):
+    next_contact_at: datetime
+    status: str = Field(default="PENDIENTE", pattern="^(PENDIENTE|CONTACTADO|CERRADO)$")
+    comment: Optional[str] = Field(default=None, max_length=500)
+
+
+class ClientFollowUpUpdate(BaseModel):
+    next_contact_at: Optional[datetime] = None
+    status: Optional[str] = Field(default=None, pattern="^(PENDIENTE|CONTACTADO|CERRADO)$")
+    comment: Optional[str] = Field(default=None, max_length=500)
+
+
+class ClientFollowUpResponse(BaseModel):
+    id: int
+    client_id: int
+    next_contact_at: datetime
+    status: str
+    comment: Optional[str] = None
+    username: Optional[str] = None
+    created_at: datetime
+    updated_at: Optional[datetime] = None

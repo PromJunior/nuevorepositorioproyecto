@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
-import { Plus } from 'lucide-react';
+import { Plus, Trophy } from 'lucide-react';
 import { PageHeader } from '../../../shared/components/PageHeader';
 import { DataState } from '../../../shared/components/DataState';
 import { Modal } from '../../../shared/components/Modal';
@@ -14,7 +14,8 @@ import { ClientForm } from '../components/ClientForm';
 import { ClientSearchBar } from '../components/ClientSearchBar';
 import { ClientStatsCards } from '../components/ClientStatsCards';
 import { ClientTable } from '../components/ClientTable';
-import { useClients, useClientsSummary, useCreateClient, useDeactivateClient, useUpdateClient } from '../hooks/useClients';
+import { ClientCrmTable } from '../components/ClientCrmTable';
+import { useClients, useClientsSummary, useCreateClient, useCrmClients, useCrmRanking, useDeactivateClient, useUpdateClient } from '../hooks/useClients';
 import { emptyClientForm, toClientPayload, validateClientForm } from '../schemas/clientSchema';
 
 const MySwal = withReactContent(Swal);
@@ -34,6 +35,7 @@ const ClientsPage = () => {
     const canManage = role === 'admin';
     const [query, setQuery] = useState('');
     const [status, setStatus] = useState('active');
+    const [segment, setSegment] = useState('');
     const [page, setPage] = useState(1);
     const [modalMode, setModalMode] = useState(null);
     const [editId, setEditId] = useState(null);
@@ -42,6 +44,8 @@ const ClientsPage = () => {
     const includeInactive = status !== 'active';
     const { data: clients = [], isLoading, isError } = useClients({ limit: 500, include_inactive: includeInactive });
     const { data: crmSummary } = useClientsSummary();
+    const { data: crmClients = [] } = useCrmClients({ segment: segment || undefined, limit: 500 });
+    const { data: ranking = [] } = useCrmRanking({ metric: 'amount', limit: 10 });
     const createMutation = useCreateClient();
     const updateMutation = useUpdateClient();
     const deactivateMutation = useDeactivateClient();
@@ -63,6 +67,9 @@ const ClientsPage = () => {
         active: crmSummary?.active_clients ?? clients.filter((client) => client.is_active).length,
         frequent: crmSummary?.frequent_clients ?? 0,
         newThisMonth: crmSummary?.new_clients_this_month ?? 0,
+        vip: crmSummary?.vip_clients ?? 0,
+        inactive: crmSummary?.inactive_clients ?? 0,
+        newClients: crmSummary?.new_clients ?? 0,
     }), [clients, crmSummary]);
 
     const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
@@ -145,6 +152,44 @@ const ClientsPage = () => {
             />
 
             <ClientStatsCards summary={summary} />
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <div className="space-y-3">
+                    <div className="flex flex-col gap-3 rounded-lg bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                        <span className="text-xs font-black uppercase tracking-widest text-slate-400">Segmentacion comercial</span>
+                        <select
+                            value={segment}
+                            onChange={(event) => setSegment(event.target.value)}
+                            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500"
+                        >
+                            <option value="">Todos los segmentos</option>
+                            <option value="VIP">VIP</option>
+                            <option value="Frecuente">Frecuente</option>
+                            <option value="Ocasional">Ocasional</option>
+                            <option value="Inactivo">Inactivo</option>
+                            <option value="Nuevo">Nuevo</option>
+                        </select>
+                    </div>
+                    <ClientCrmTable clients={crmClients} onView={(client) => navigate(`${ROUTES.clients}/${client.id}`)} />
+                </div>
+                <div className="rounded-lg bg-white p-5">
+                    <div className="mb-4 flex items-center gap-2">
+                        <Trophy size={16} className="text-amber-600" />
+                        <h2 className="text-sm font-black text-slate-900">Top compradores</h2>
+                    </div>
+                    <div className="space-y-3">
+                        {ranking.map((client, index) => (
+                            <div key={client.id} className="flex items-center justify-between rounded-xl bg-slate-50 p-3">
+                                <div>
+                                    <p className="text-xs font-black text-slate-400">#{index + 1}</p>
+                                    <p className="font-bold text-slate-800">{client.full_name}</p>
+                                    <p className="text-xs text-slate-400">{client.segment}</p>
+                                </div>
+                                <p className="font-mono text-sm font-black text-slate-900">S/ {Number(client.monetary || 0).toFixed(2)}</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
             <ClientSearchBar
                 query={query}
                 status={status}
