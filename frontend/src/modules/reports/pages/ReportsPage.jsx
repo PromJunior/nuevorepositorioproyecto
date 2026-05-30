@@ -11,6 +11,7 @@ import { SessionStatusBadge } from '../../cash-session/components/SessionStatusB
 import { ReportFilters } from '../components/ReportFilters';
 import { ExportButtons } from '../components/ExportButtons';
 import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
+import { UserFilter } from '../../../shared/components/UserFilter';
 import {
     useSalesReport, usePurchasesReport,
     useKardexReport, useCashReport, useAuditLogs,
@@ -80,13 +81,22 @@ const SalesTab = () => {
                     onFilterChange={onChange}
                     onReset={onReset}
                     extraSlot={
-                        <div className="space-y-1">
-                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Metodo de pago</label>
-                            <PaymentMethodFilter
-                                value={filters.payment_method_id || ''}
-                                onChange={(value) => onChange('payment_method_id', value)}
-                            />
-                        </div>
+                        <>
+                            <div className="space-y-1">
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Usuario / Vendedor</label>
+                                <UserFilter
+                                    value={filters.user_id || ''}
+                                    onChange={(value) => onChange('user_id', value)}
+                                />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Metodo de pago</label>
+                                <PaymentMethodFilter
+                                    value={filters.payment_method_id || ''}
+                                    onChange={(value) => onChange('payment_method_id', value)}
+                                />
+                            </div>
+                        </>
                     }
                 />
             </div>
@@ -264,13 +274,22 @@ const CashTab = () => {
                 onFilterChange={onChange}
                 onReset={onReset}
                 extraSlot={
-                    <div className="space-y-1">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Metodo de pago</label>
-                        <PaymentMethodFilter
-                            value={filters.payment_method_id || ''}
-                            onChange={(value) => onChange('payment_method_id', value)}
-                        />
-                    </div>
+                    <>
+                        <div className="space-y-1">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Usuario / Vendedor</label>
+                            <UserFilter
+                                value={filters.user_id || ''}
+                                onChange={(value) => onChange('user_id', value)}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Metodo de pago</label>
+                            <PaymentMethodFilter
+                                value={filters.payment_method_id || ''}
+                                onChange={(value) => onChange('payment_method_id', value)}
+                            />
+                        </div>
+                    </>
                 }
             />
             <div className="flex items-center justify-between">
@@ -333,7 +352,20 @@ const AuditTab = () => {
 
     return (
         <div className="space-y-4">
-            <ReportFilters filters={filters} onFilterChange={onChange} onReset={onReset} />
+            <ReportFilters
+                filters={filters}
+                onFilterChange={onChange}
+                onReset={onReset}
+                extraSlot={
+                    <div className="space-y-1">
+                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">Usuario</label>
+                        <UserFilter
+                            value={filters.user_id || ''}
+                            onChange={(value) => onChange('user_id', value)}
+                        />
+                    </div>
+                }
+            />
             <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-400">{data.length} registros</span>
                 <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />

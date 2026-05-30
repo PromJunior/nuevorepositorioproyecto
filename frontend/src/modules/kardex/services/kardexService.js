@@ -1,5 +1,19 @@
 import apiClient from '../../../services/api/client';
 
+const cleanParams = (params = {}) =>
+    Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v != null));
+
+const downloadBlob = (data, filename) => {
+    const url = window.URL.createObjectURL(new Blob([data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+};
+
 /**
  * Servicio Kardex – todas las llamadas usan apiClient (Axios con JWT).
  */
@@ -12,11 +26,31 @@ export const kardexService = {
      */
     getTransactions: async (params = {}) => {
         // Eliminar claves vacías para no enviar ?product_id= vacío
-        const clean = Object.fromEntries(
-            Object.entries(params).filter(([, v]) => v !== '' && v != null)
-        );
-        const response = await apiClient.get('/inventory/transactions', { params: clean });
+        const response = await apiClient.get('/inventory/transactions', { params: cleanParams(params) });
         return response.data;
+    },
+
+    getDailySummary: async (params = {}) => {
+        const response = await apiClient.get('/reports/kardex/daily-summary', {
+            params: cleanParams(params),
+        });
+        return response.data;
+    },
+
+    exportDailySummaryExcel: async (params = {}) => {
+        const response = await apiClient.get('/reports/kardex/daily-summary/export/excel', {
+            params: cleanParams(params),
+            responseType: 'blob',
+        });
+        downloadBlob(response.data, `resumen_diario_kardex_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    },
+
+    exportDailySummaryPdf: async (params = {}) => {
+        const response = await apiClient.get('/reports/kardex/daily-summary/export/pdf', {
+            params: cleanParams(params),
+            responseType: 'blob',
+        });
+        downloadBlob(response.data, `resumen_diario_kardex_${new Date().toISOString().slice(0, 10)}.pdf`);
     },
 
     /**

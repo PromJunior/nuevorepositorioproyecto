@@ -63,6 +63,18 @@ class KardexReportRow(BaseModel):
 
 
 # ─── Fila de reporte de caja ──────────────────────────────────────────────────
+class KardexDailySummaryRow(BaseModel):
+    date: date
+    stock_entries: int
+    stock_outputs: int
+    stock_adjustments: int
+    net_stock_movement: int
+    sales_count: int
+    sales_amount: Decimal
+
+    model_config = ConfigDict(from_attributes=False)
+
+
 class CashReportRow(BaseModel):
     id: int
     username: str

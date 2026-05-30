@@ -4,7 +4,7 @@ from typing import Optional, List
 from datetime import date
 
 from database.database import get_db
-from auth.security import get_current_user
+from auth.security import get_current_user, get_user_role_name
 from models.model import User, Product
 from schemas.inventory_schema import (
     InventoryTransactionListResponse,
@@ -31,21 +31,27 @@ router = APIRouter(
 @router.get("/transactions", response_model=InventoryTransactionListResponse)
 def list_transactions(
     product_id: Optional[int] = Query(None, description="Filtrar por producto"),
+    category_id: Optional[int] = Query(None, description="Filtrar por categoria"),
     transaction_type: Optional[str] = Query(None, description="ENTRADA | SALIDA | AJUSTE"),
     user_id: Optional[int] = Query(None, description="Filtrar por usuario"),
+    payment_method_id: Optional[int] = Query(None, description="Filtrar por metodo de pago"),
     source_type: Optional[str] = Query(None, description="orders | purchases | manual"),
     date_from: Optional[date] = Query(None, description="Fecha desde (YYYY-MM-DD)"),
     date_to: Optional[date] = Query(None, description="Fecha hasta (YYYY-MM-DD)"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
+    is_admin = (get_user_role_name(current_user) or "").lower() == "admin"
+    effective_user_id = user_id if is_admin else current_user.id
     total, items = get_transactions(
         db=db,
         product_id=product_id,
+        category_id=category_id,
         transaction_type=transaction_type,
-        user_id=user_id,
+        user_id=effective_user_id,
+        payment_method_id=payment_method_id,
         source_type=source_type,
         date_from=date_from,
         date_to=date_to,

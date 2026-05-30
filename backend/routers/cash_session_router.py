@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from database.database import get_db
-from auth.security import get_current_user, require_role
+from auth.security import get_current_user, get_user_role_name, require_role
 from models.model import User
 from schemas.cash_session_schema import (
     CashSessionOpen,
@@ -95,14 +95,22 @@ def close_session(
 # Admin: todas las sesiones   |   Vendedor: solo las propias
 @router.get("/history", response_model=List[CashSessionWithUserResponse])
 def get_history(
+    user_id: Optional[int] = None,
     payment_method_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    role_name = current_user.role.name if current_user.role else ""
+    role_name = get_user_role_name(current_user) or ""
 
-    if role_name == "admin":
-        sessions = get_cash_sessions(db=db, payment_method_id=payment_method_id)
+    if role_name.lower() == "admin":
+        if user_id:
+            sessions = get_cash_sesions_by_user(
+                db=db,
+                user_id=user_id,
+                payment_method_id=payment_method_id,
+            )
+        else:
+            sessions = get_cash_sessions(db=db, payment_method_id=payment_method_id)
     else:
         sessions = get_cash_sesions_by_user(
             db=db,

@@ -9,6 +9,7 @@ import { ROUTES } from '../../../constants/routes';
 import { useAuthStore } from '../../../shared/store/useAuthStore';
 import { useDashboardSummary } from '../hooks/useDashboard';
 import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
+import { UserFilter } from '../../../shared/components/UserFilter';
 
 // Componentes del dashboard
 import { DashboardKpiCards } from '../components/DashboardKpiCards';
@@ -51,7 +52,9 @@ const QuickActions = () => (
 const DashboardPage = () => {
     const role = useAuthStore((s) => s.role);
     const [paymentMethodId, setPaymentMethodId] = useState('');
-    const summaryQuery = useDashboardSummary({ payment_method_id: paymentMethodId });
+    const [userId, setUserId] = useState('');
+    const dashboardFilters = { payment_method_id: paymentMethodId, user_id: userId };
+    const summaryQuery = useDashboardSummary(dashboardFilters);
 
     return (
         <div className="min-h-screen space-y-6 bg-slate-50/40 p-6">
@@ -68,13 +71,16 @@ const DashboardPage = () => {
                 }
             />
 
-            <Card className="p-3">
+            <Card className="flex flex-col gap-3 p-3 lg:flex-row lg:items-center lg:justify-between">
                 <PaymentMethodFilter
                     value={paymentMethodId}
                     onChange={setPaymentMethodId}
                     quickOnly
                     variant="buttons"
                 />
+                <div className="w-full max-w-xs">
+                    <UserFilter value={userId} onChange={setUserId} />
+                </div>
             </Card>
 
             {/* ─── KPI Cards ──────────────────────────────────────── */}
@@ -94,21 +100,21 @@ const DashboardPage = () => {
             {/* ─── Gráficos principales ───────────────────────────── */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
                 <div className="min-w-0 xl:col-span-2">
-                    <SalesChart paymentMethodId={paymentMethodId} />
+                    <SalesChart filters={dashboardFilters} />
                 </div>
-                <PaymentMethodsChart paymentMethodId={paymentMethodId} />
+                <PaymentMethodsChart filters={dashboardFilters} />
             </div>
 
             {/* ─── Top productos + Top clientes ───────────────────── */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <TopProductsTable paymentMethodId={paymentMethodId} />
-                <TopClientsTable paymentMethodId={paymentMethodId} />
+                <TopProductsTable filters={dashboardFilters} />
+                <TopClientsTable filters={dashboardFilters} />
             </div>
 
             {/* ─── Ventas recientes + Accesos rápidos ─────────────── */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
                 <div className="xl:col-span-2">
-                    <RecentSalesTable paymentMethodId={paymentMethodId} />
+                    <RecentSalesTable filters={dashboardFilters} />
                 </div>
                 <QuickActions />
             </div>

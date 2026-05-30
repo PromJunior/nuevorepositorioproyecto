@@ -43,8 +43,19 @@ def _apply_payment_method_filter(query, payment_method_id: Optional[int]):
     )
 
 
+def _apply_user_filter(query, user_id: Optional[int]):
+    if user_id is None:
+        return query
+
+    return query.filter(Order.user_id == user_id)
+
+
 # ─── KPIs principales ─────────────────────────────────────────────────────────
-def get_dashboard_summary(db: Session, payment_method_id: Optional[int] = None) -> dict:
+def get_dashboard_summary(
+    db: Session,
+    payment_method_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> dict:
     now = _now_peru()
     today_start = _start_of_day(now)
     month_start = _start_of_month(now)
@@ -55,6 +66,7 @@ def get_dashboard_summary(db: Session, payment_method_id: Optional[int] = None) 
         func.coalesce(func.sum(Order.total_amount), 0),
     ).filter(Order.order_date >= today_start)
     today_q = _apply_payment_method_filter(today_q, payment_method_id)
+    today_q = _apply_user_filter(today_q, user_id)
     orders_today, sales_today = today_q.one()
 
     # ─ Ventas este mes
@@ -63,6 +75,7 @@ def get_dashboard_summary(db: Session, payment_method_id: Optional[int] = None) 
         func.coalesce(func.sum(Order.total_amount), 0),
     ).filter(Order.order_date >= month_start)
     month_q = _apply_payment_method_filter(month_q, payment_method_id)
+    month_q = _apply_user_filter(month_q, user_id)
     orders_month, sales_month = month_q.one()
 
     # ─ Ventas totales
@@ -71,6 +84,7 @@ def get_dashboard_summary(db: Session, payment_method_id: Optional[int] = None) 
         func.coalesce(func.sum(Order.total_amount), 0),
     )
     total_q = _apply_payment_method_filter(total_q, payment_method_id)
+    total_q = _apply_user_filter(total_q, user_id)
     orders_total, sales_total = total_q.one()
 
     # ─ Compras este mes
@@ -116,7 +130,8 @@ def get_dashboard_summary(db: Session, payment_method_id: Optional[int] = None) 
             db.query(func.coalesce(func.sum(Order.total_amount), 0))
             .filter(Order.cash_session_id == open_session.id)
         )
-        sales_in_session = _apply_payment_method_filter(sales_in_session, payment_method_id).scalar() or 0
+        sales_in_session = _apply_payment_method_filter(sales_in_session, payment_method_id)
+        sales_in_session = _apply_user_filter(sales_in_session, user_id).scalar() or 0
         open_expected = Decimal(str(open_session.opening_amount)) + Decimal(str(sales_in_session))
 
     return {
@@ -140,7 +155,12 @@ def get_dashboard_summary(db: Session, payment_method_id: Optional[int] = None) 
 
 
 # ─── Top productos más vendidos ───────────────────────────────────────────────
-def get_top_products(db: Session, limit: int = 10, payment_method_id: Optional[int] = None) -> list:
+def get_top_products(
+    db: Session,
+    limit: int = 10,
+    payment_method_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> list:
     q = (
         db.query(
             OrderItem.product_id,
@@ -152,6 +172,7 @@ def get_top_products(db: Session, limit: int = 10, payment_method_id: Optional[i
         .join(Order, Order.id == OrderItem.order_id)
     )
     q = _apply_payment_method_filter(q, payment_method_id)
+    q = _apply_user_filter(q, user_id)
     rows = (
         q.group_by(OrderItem.product_id, Product.name_product)
         .order_by(func.sum(OrderItem.quantity).desc())
@@ -170,7 +191,12 @@ def get_top_products(db: Session, limit: int = 10, payment_method_id: Optional[i
 
 
 # ─── Top clientes por gasto ───────────────────────────────────────────────────
-def get_top_clients(db: Session, limit: int = 8, payment_method_id: Optional[int] = None) -> list:
+def get_top_clients(
+    db: Session,
+    limit: int = 8,
+    payment_method_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> list:
     q = (
         db.query(
             Order.client_id,
@@ -181,6 +207,7 @@ def get_top_clients(db: Session, limit: int = 8, payment_method_id: Optional[int
         .outerjoin(Client, Client.id == Order.client_id)
     )
     q = _apply_payment_method_filter(q, payment_method_id)
+    q = _apply_user_filter(q, user_id)
     rows = (
         q.group_by(Order.client_id, Client.full_name)
         .order_by(func.sum(Order.total_amount).desc())
@@ -199,7 +226,12 @@ def get_top_clients(db: Session, limit: int = 8, payment_method_id: Optional[int
 
 
 # ─── Ventas recientes ─────────────────────────────────────────────────────────
-def get_recent_sales(db: Session, limit: int = 10, payment_method_id: Optional[int] = None) -> list:
+def get_recent_sales(
+    db: Session,
+    limit: int = 10,
+    payment_method_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> list:
     from sqlalchemy.orm import joinedload
     q = (
         db.query(Order)
@@ -210,6 +242,7 @@ def get_recent_sales(db: Session, limit: int = 10, payment_method_id: Optional[i
         )
     )
     q = _apply_payment_method_filter(q, payment_method_id)
+    q = _apply_user_filter(q, user_id)
     orders = (
         q.order_by(Order.id.desc())
         .limit(limit)
@@ -257,7 +290,12 @@ def get_recent_purchases(db: Session, limit: int = 10) -> list:
 
 
 # ─── Gráfico ventas diarias ───────────────────────────────────────────────────
-def get_sales_chart(db: Session, days: int = 30, payment_method_id: Optional[int] = None) -> list:
+def get_sales_chart(
+    db: Session,
+    days: int = 30,
+    payment_method_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> list:
     now = _now_peru()
     since = now - timedelta(days=days - 1)
     since_start = _start_of_day(since)
@@ -271,6 +309,7 @@ def get_sales_chart(db: Session, days: int = 30, payment_method_id: Optional[int
         .filter(Order.order_date >= since_start)
     )
     q = _apply_payment_method_filter(q, payment_method_id)
+    q = _apply_user_filter(q, user_id)
     rows = (
         q
         .group_by(cast(Order.order_date, Date))
@@ -290,7 +329,11 @@ def get_sales_chart(db: Session, days: int = 30, payment_method_id: Optional[int
 
 
 # ─── Distribución métodos de pago ─────────────────────────────────────────────
-def get_payment_method_stats(db: Session, payment_method_id: Optional[int] = None) -> list:
+def get_payment_method_stats(
+    db: Session,
+    payment_method_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+) -> list:
     q = (
         db.query(
             PaymentMethod.name_payment_method.label("method"),
@@ -298,9 +341,12 @@ def get_payment_method_stats(db: Session, payment_method_id: Optional[int] = Non
             func.coalesce(func.sum(Payment.amount), 0).label("total"),
         )
         .join(Payment, Payment.id_payment_method == PaymentMethod.id)
+        .join(Order, Order.id == Payment.order_id)
     )
     if payment_method_id is not None:
         q = q.filter(Payment.id_payment_method == payment_method_id)
+    if user_id is not None:
+        q = q.filter(Order.user_id == user_id)
     rows = (
         q
         .group_by(PaymentMethod.name_payment_method)

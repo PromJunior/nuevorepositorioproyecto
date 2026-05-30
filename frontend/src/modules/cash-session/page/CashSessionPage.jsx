@@ -20,12 +20,14 @@ import { SessionSummaryCards } from '../components/SessionSummaryCards';
 import { SessionHistoryTable } from '../components/SessionHistoryTable';
 import { SessionStatusBadge } from '../components/SessionStatusBadge';
 import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
+import { UserFilter } from '../../../shared/components/UserFilter';
 
 const MySwal = withReactContent(Swal);
 
 const CashSessionPage = () => {
     const user = useAuthStore((s) => s.user);
     const [paymentMethodId, setPaymentMethodId] = useState('');
+    const [userId, setUserId] = useState('');
 
     // ─── Queries ────────────────────────────────────────────────────────────
     const activeSessionQuery = useActiveSession();
@@ -33,7 +35,7 @@ const CashSessionPage = () => {
     const hasSession = Boolean(activeSession);
 
     const summaryQuery = useSessionSummary(hasSession, { payment_method_id: paymentMethodId });
-    const historyQuery = useSessionHistory({ payment_method_id: paymentMethodId });
+    const historyQuery = useSessionHistory({ payment_method_id: paymentMethodId, user_id: userId });
 
     // ─── Mutations ──────────────────────────────────────────────────────────
     const openMutation = useOpenSession();
@@ -143,12 +145,18 @@ const CashSessionPage = () => {
                 }
             />
 
-            <Card className="p-4">
-                <div className="max-w-xs space-y-1">
+            <Card className="flex flex-col gap-3 p-4 sm:flex-row">
+                <div className="w-full max-w-xs space-y-1">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                         Metodo de pago
                     </p>
                     <PaymentMethodFilter value={paymentMethodId} onChange={setPaymentMethodId} />
+                </div>
+                <div className="w-full max-w-xs space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Usuario / Vendedor
+                    </p>
+                    <UserFilter value={userId} onChange={setUserId} />
                 </div>
             </Card>
 

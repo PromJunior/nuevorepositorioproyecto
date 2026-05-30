@@ -22,9 +22,9 @@ const CustomTooltip = ({ active, payload, label }) => {
  * Gráfico de área: ventas diarias.
  * Permite cambiar entre 7 y 30 días.
  */
-export const SalesChart = ({ paymentMethodId = '' }) => {
+export const SalesChart = ({ filters = {} }) => {
     const [days, setDays] = useState(30);
-    const { data = [], isLoading } = useSalesChart(days, { payment_method_id: paymentMethodId });
+    const { data = [], isLoading } = useSalesChart(days, filters);
 
     // Formatear eje X: mostrar solo MM-DD
     const formatted = data.map((d) => ({

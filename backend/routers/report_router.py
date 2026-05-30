@@ -5,11 +5,11 @@ from typing import List, Optional
 from datetime import date
 
 from database.database import get_db
-from auth.security import get_current_user, get_current_admin_user
+from auth.security import get_current_user, get_current_admin_user, get_user_role_name
 from models.model import User
 from schemas.report_schema import (
     SalesReportRow, PurchasesReportRow,
-    KardexReportRow, CashReportRow, AuditLogRow,
+    KardexReportRow, KardexDailySummaryRow, CashReportRow, AuditLogRow,
 )
 from crud import report_crud
 
@@ -46,11 +46,13 @@ def sales_report(
     skip: int = Query(0, ge=0),
     limit: int = Query(200, ge=1, le=1000),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
+    is_admin = (get_user_role_name(current_user) or "").lower() == "admin"
+    effective_user_id = user_id if is_admin else current_user.id
     _, rows = report_crud.get_sales_report(
         db, date_from=date_from, date_to=date_to,
-        user_id=user_id, client_id=client_id,
+        user_id=effective_user_id, client_id=client_id,
         payment_method_id=payment_method_id,
         skip=skip, limit=limit,
     )
@@ -163,6 +165,93 @@ def kardex_report(
     return rows
 
 
+@router.get("/reports/kardex/daily-summary", response_model=List[KardexDailySummaryRow])
+def kardex_daily_summary(
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    product_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    payment_method_id: Optional[int] = None,
+    source_type: Optional[str] = None,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(500, ge=1, le=2000),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    is_admin = (get_user_role_name(current_user) or "").lower() == "admin"
+    effective_user_id = user_id if is_admin else current_user.id
+    _, rows = report_crud.get_kardex_daily_summary(
+        db,
+        date_from=date_from,
+        date_to=date_to,
+        product_id=product_id,
+        category_id=category_id,
+        user_id=effective_user_id,
+        payment_method_id=payment_method_id,
+        source_type=source_type,
+        skip=skip,
+        limit=limit,
+    )
+    return rows
+
+
+@router.get("/reports/kardex/daily-summary/export/excel")
+def export_kardex_daily_excel(
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    product_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    payment_method_id: Optional[int] = None,
+    source_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_admin_user),
+):
+    filters = {
+        "date_from": date_from,
+        "date_to": date_to,
+        "product_id": product_id,
+        "category_id": category_id,
+        "user_id": user_id,
+        "payment_method_id": payment_method_id,
+        "source_type": source_type,
+    }
+    _, rows = report_crud.get_kardex_daily_summary(db, **filters, limit=5000)
+    return _excel_response(
+        report_crud.generate_kardex_daily_excel(rows, filters),
+        "resumen_diario_kardex.xlsx",
+    )
+
+
+@router.get("/reports/kardex/daily-summary/export/pdf")
+def export_kardex_daily_pdf(
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    product_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    payment_method_id: Optional[int] = None,
+    source_type: Optional[str] = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_admin_user),
+):
+    filters = {
+        "date_from": date_from,
+        "date_to": date_to,
+        "product_id": product_id,
+        "category_id": category_id,
+        "user_id": user_id,
+        "payment_method_id": payment_method_id,
+        "source_type": source_type,
+    }
+    _, rows = report_crud.get_kardex_daily_summary(db, **filters, limit=2000)
+    return _pdf_response(
+        report_crud.generate_kardex_daily_pdf(rows, filters),
+        "resumen_diario_kardex.pdf",
+    )
+
+
 @router.get("/reports/kardex/export/excel")
 def export_kardex_excel(
     date_from:        Optional[date] = None,
@@ -204,11 +293,13 @@ def cash_report(
     skip: int = Query(0, ge=0),
     limit: int = Query(200, ge=1, le=500),
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ):
+    is_admin = (get_user_role_name(current_user) or "").lower() == "admin"
+    effective_user_id = user_id if is_admin else current_user.id
     _, rows = report_crud.get_cash_report(
         db, date_from=date_from, date_to=date_to,
-        user_id=user_id, status=status, payment_method_id=payment_method_id,
+        user_id=effective_user_id, status=status, payment_method_id=payment_method_id,
         skip=skip, limit=limit,
     )
     return rows

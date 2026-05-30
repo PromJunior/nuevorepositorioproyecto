@@ -2,6 +2,9 @@ import React from 'react';
 import { RefreshCw, Search } from 'lucide-react';
 import { Card } from '../../../shared/components/ui/card';
 import { Input } from '../../../shared/components/ui/input';
+import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
+import { UserFilter } from '../../../shared/components/UserFilter';
+import { useAuthStore } from '../../../shared/store/useAuthStore';
 
 const MOVEMENT_TYPES = [
     { value: '', label: 'Todos los tipos' },
@@ -24,45 +27,69 @@ const selectClass =
  * Panel de filtros del Kardex General.
  *
  * Props:
- *  - filters: { product_id, transaction_type, source_type, date_from, date_to }
+ *  - filters: { product_id, category_id, transaction_type, source_type, date_from, date_to, user_id, payment_method_id }
  *  - products: array de { id, name_product }
+ *  - categories: array de { id, name_category }
  *  - onFilterChange(key, value)
  *  - onReset()
  */
-export const KardexFilters = ({ filters, products = [], onFilterChange, onReset }) => (
-    <Card className="p-5">
-        <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
-            <span className="text-sm font-bold text-slate-700">Filtros</span>
-            <button
-                onClick={onReset}
-                className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-600 transition-colors hover:bg-blue-100"
-            >
-                <RefreshCw size={11} /> Limpiar
-            </button>
-        </div>
+export const KardexFilters = ({ filters, products = [], categories = [], onFilterChange, onReset }) => {
+    const role = useAuthStore((state) => state.role);
+    const isAdmin = role === 'admin';
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {/* Producto */}
-            <div className="space-y-1.5">
-                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                    Producto
-                </label>
-                <div className="relative">
-                    <Search className="absolute left-3 top-2.5 text-slate-400" size={13} />
+    return (
+        <Card className="p-5">
+            <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
+                <span className="text-sm font-bold text-slate-700">Filtros</span>
+                <button
+                    onClick={onReset}
+                    className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-600 transition-colors hover:bg-blue-100"
+                >
+                    <RefreshCw size={11} /> Limpiar
+                </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                {/* Producto */}
+                <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Producto
+                    </label>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-2.5 text-slate-400" size={13} />
+                        <select
+                            className={`${selectClass} pl-8`}
+                            value={filters.product_id}
+                            onChange={(e) => onFilterChange('product_id', e.target.value)}
+                        >
+                            <option value="">Todos los productos</option>
+                            {products.map((p) => (
+                                <option key={p.id} value={p.id}>
+                                    {p.name_product}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
+
+                {/* Categoria */}
+                <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Categoria
+                    </label>
                     <select
-                        className={`${selectClass} pl-8`}
-                        value={filters.product_id}
-                        onChange={(e) => onFilterChange('product_id', e.target.value)}
+                        className={selectClass}
+                        value={filters.category_id}
+                        onChange={(e) => onFilterChange('category_id', e.target.value)}
                     >
-                        <option value="">Todos los productos</option>
-                        {products.map((p) => (
-                            <option key={p.id} value={p.id}>
-                                {p.name_product}
+                        <option value="">Todas las categorias</option>
+                        {categories.map((category) => (
+                            <option key={category.id} value={category.id}>
+                                {category.name_category}
                             </option>
                         ))}
                     </select>
                 </div>
-            </div>
 
             {/* Tipo movimiento */}
             <div className="space-y-1.5">
@@ -123,6 +150,29 @@ export const KardexFilters = ({ filters, products = [], onFilterChange, onReset 
                     onChange={(e) => onFilterChange('date_to', e.target.value)}
                 />
             </div>
+
+            {isAdmin && (
+                <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Usuario / Vendedor
+                    </label>
+                    <UserFilter
+                        value={filters.user_id}
+                        onChange={(value) => onFilterChange('user_id', value)}
+                    />
+                </div>
+            )}
+
+            <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    Metodo de pago
+                </label>
+                <PaymentMethodFilter
+                    value={filters.payment_method_id}
+                    onChange={(value) => onFilterChange('payment_method_id', value)}
+                />
+            </div>
         </div>
     </Card>
-);
+    );
+};

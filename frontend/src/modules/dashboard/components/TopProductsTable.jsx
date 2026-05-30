@@ -5,9 +5,9 @@ import { Card } from '../../../shared/components/ui/card';
 import { formatCurrency, formatNumber } from '../../../shared/utils/formatters';
 import { useTopProducts } from '../hooks/useDashboard';
 
-export const TopProductsTable = ({ paymentMethodId = '' }) => {
+export const TopProductsTable = ({ filters = {} }) => {
     const navigate = useNavigate();
-    const { data: products = [], isLoading } = useTopProducts(10, { payment_method_id: paymentMethodId });
+    const { data: products = [], isLoading } = useTopProducts(10, filters);
 
     return (
         <Card className="overflow-hidden">

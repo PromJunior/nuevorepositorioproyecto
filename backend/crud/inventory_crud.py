@@ -6,6 +6,8 @@ from typing import Optional
 from models.model import (
     InventoryTransaction,
     InventoryTransactionType,
+    Order,
+    Payment,
     Product,
 )
 
@@ -52,6 +54,8 @@ def _apply_filters(
     product_id: Optional[int] = None,
     transaction_type: Optional[str] = None,
     user_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    payment_method_id: Optional[int] = None,
     source_type: Optional[str] = None,
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
@@ -75,6 +79,23 @@ def _apply_filters(
 
     if user_id is not None:
         query = query.filter(InventoryTransaction.user_id == user_id)
+
+    if category_id is not None:
+        query = query.join(Product, Product.id == InventoryTransaction.product_id).filter(
+            Product.category_id == category_id
+        )
+
+    if payment_method_id is not None:
+        query = (
+            query.join(
+                Order,
+                (InventoryTransaction.source_type == "orders")
+                & (InventoryTransaction.source_id == Order.id),
+            )
+            .join(Payment, Payment.order_id == Order.id)
+            .filter(Payment.id_payment_method == payment_method_id)
+            .distinct()
+        )
 
     if source_type:
         query = query.filter(InventoryTransaction.source_type == source_type)
@@ -100,6 +121,8 @@ def get_transactions(
     product_id: Optional[int] = None,
     transaction_type: Optional[str] = None,
     user_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    payment_method_id: Optional[int] = None,
     source_type: Optional[str] = None,
     date_from: Optional[date] = None,
     date_to: Optional[date] = None,
@@ -112,6 +135,8 @@ def get_transactions(
         product_id=product_id,
         transaction_type=transaction_type,
         user_id=user_id,
+        category_id=category_id,
+        payment_method_id=payment_method_id,
         source_type=source_type,
         date_from=date_from,
         date_to=date_to,

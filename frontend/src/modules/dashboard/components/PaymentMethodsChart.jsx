@@ -20,8 +20,8 @@ const CustomTooltip = ({ active, payload }) => {
     );
 };
 
-export const PaymentMethodsChart = ({ paymentMethodId = '' }) => {
-    const { data = [], isLoading } = usePaymentMethodStats({ payment_method_id: paymentMethodId });
+export const PaymentMethodsChart = ({ filters = {} }) => {
+    const { data = [], isLoading } = usePaymentMethodStats(filters);
 
     const chartData = data.map((d) => ({
         ...d,

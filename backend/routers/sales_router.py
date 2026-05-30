@@ -44,13 +44,14 @@ def create_order_db(order: OrderCreate, db: Session = Depends(get_db), current_u
 def get_order_db(
     skip: int = 0,
     limit: int = 100,
+    user_id: Optional[int] = None,
     payment_method_id: Optional[int] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    role = current_user.role.name
+    role = (current_user.role.name if current_user.role else "").lower()
     if role == "admin":
-        return order_crud.get_order(db=db, skip=skip, limit=limit, payment_method_id=payment_method_id)
+        return order_crud.get_order(db=db, skip=skip, limit=limit, user_id=user_id, payment_method_id=payment_method_id)
     elif role == "vendedor":
         return order_crud.get_order(db=db, skip=skip, limit=limit, user_id=current_user.id, payment_method_id=payment_method_id)
     

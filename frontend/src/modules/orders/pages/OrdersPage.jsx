@@ -12,6 +12,7 @@ import withReactContent from 'sweetalert2-react-content';
 import { useAuthStore } from '../../../shared/store/useAuthStore';
 import { orderService } from '../../../services/orderService';
 import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
+import { UserFilter } from '../../../shared/components/UserFilter';
 
 const MySwal = withReactContent(Swal);
 const MotionDiv = motion.div;
@@ -49,11 +50,15 @@ const Orders = () => {
         saleType: "Todos",
         minAmount: "",
         payment_method_id: "",
+        user_id: "",
     });
 
     const ordersQuery = useQuery({
-        queryKey: ['orders', filters.payment_method_id],
-        queryFn: () => orderService.getOrders({ payment_method_id: filters.payment_method_id || undefined }),
+        queryKey: ['orders', filters.payment_method_id, filters.user_id],
+        queryFn: () => orderService.getOrders({
+            payment_method_id: filters.payment_method_id || undefined,
+            user_id: filters.user_id || undefined,
+        }),
         staleTime: 1000 * 30,
     });
 
@@ -84,6 +89,7 @@ const Orders = () => {
             saleType: "Todos",
             minAmount: "",
             payment_method_id: "",
+            user_id: "",
         });
     };
 
@@ -242,7 +248,7 @@ const Orders = () => {
                     </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                     <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Búsqueda Nominal</label>
                         <div className="relative group">
@@ -306,6 +312,14 @@ const Orders = () => {
                         <PaymentMethodFilter
                             value={filters.payment_method_id}
                             onChange={(value) => setFilters({ ...filters, payment_method_id: value })}
+                        />
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Usuario / Vendedor</label>
+                        <UserFilter
+                            value={filters.user_id}
+                            onChange={(value) => setFilters({ ...filters, user_id: value })}
                         />
                     </div>
                 </div>

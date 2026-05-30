@@ -1,25 +1,35 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { Download, FileText } from 'lucide-react';
 import { PageHeader } from '../../../shared/components/PageHeader';
 import { DataState } from '../../../shared/components/DataState';
-import { useInventoryTransactions, useInventorySummary } from '../hooks/useKardex';
+import { useInventoryTransactions, useInventorySummary, useKardexDailySummary } from '../hooks/useKardex';
 import { useInventory } from '../../inventory/hooks/useInventory';
 import { KardexSummaryCards } from '../components/KardexSummaryCards';
+import { KardexDailySummaryCards } from '../components/KardexDailySummaryCards';
+import { KardexDailySummaryTable } from '../components/KardexDailySummaryTable';
 import { KardexFilters } from '../components/KardexFilters';
 import { KardexTable } from '../components/KardexTable';
+import { kardexService } from '../services/kardexService';
+import { useAuthStore } from '../../../shared/store/useAuthStore';
 
 const PAGE_SIZE = 50;
 
 const INITIAL_FILTERS = {
     product_id: '',
+    category_id: '',
     transaction_type: '',
     source_type: '',
     date_from: '',
     date_to: '',
+    user_id: '',
+    payment_method_id: '',
 };
 
 const KardexPage = () => {
     const [filters, setFilters] = useState(INITIAL_FILTERS);
     const [page, setPage] = useState(1);
+    const role = useAuthStore((state) => state.role);
+    const isAdmin = role === 'admin';
 
     // ─── Params para la query (incluye paginación) ───────────────────────────
     const queryParams = useMemo(() => ({
@@ -31,7 +41,8 @@ const KardexPage = () => {
     // ─── Hooks ───────────────────────────────────────────────────────────────
     const summaryQuery = useInventorySummary();
     const transactionsQuery = useInventoryTransactions(queryParams);
-    const { products } = useInventory();   // reutilizar hook existente
+    const dailySummaryQuery = useKardexDailySummary(filters);
+    const { products, categories } = useInventory();   // reutilizar hook existente
 
     // ─── Handlers ────────────────────────────────────────────────────────────
     const handleFilterChange = useCallback((key, value) => {
@@ -44,7 +55,16 @@ const KardexPage = () => {
         setPage(1);
     }, []);
 
+    const handleExportExcel = useCallback(() => {
+        kardexService.exportDailySummaryExcel(filters);
+    }, [filters]);
+
+    const handleExportPdf = useCallback(() => {
+        kardexService.exportDailySummaryPdf(filters);
+    }, [filters]);
+
     const { items = [], total = 0 } = transactionsQuery.data ?? {};
+    const dailyRows = dailySummaryQuery.data ?? [];
 
     return (
         <div className="min-h-screen space-y-6 bg-slate-50/40 p-6">
@@ -67,11 +87,48 @@ const KardexPage = () => {
             <KardexFilters
                 filters={filters}
                 products={products}
+                categories={categories}
                 onFilterChange={handleFilterChange}
                 onReset={handleReset}
             />
 
             {/* Tabla con paginación */}
+            <DataState
+                isLoading={dailySummaryQuery.isLoading}
+                isError={dailySummaryQuery.isError}
+                isEmpty={!dailySummaryQuery.isLoading && dailyRows.length === 0}
+                loadingLabel="Cargando resumen diario..."
+                emptyTitle="Sin resumen diario"
+                emptyDescription="No hay movimientos ni ventas con los filtros aplicados."
+            >
+                <div className="space-y-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="flex-1">
+                            <KardexDailySummaryCards rows={dailyRows} />
+                        </div>
+                        {isAdmin && (
+                        <div className="flex shrink-0 gap-2">
+                            <button
+                                type="button"
+                                onClick={handleExportExcel}
+                                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700"
+                            >
+                                <Download size={14} /> Excel
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleExportPdf}
+                                className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-white hover:bg-slate-900"
+                            >
+                                <FileText size={14} /> PDF
+                            </button>
+                        </div>
+                        )}
+                    </div>
+                    <KardexDailySummaryTable rows={dailyRows} />
+                </div>
+            </DataState>
+
             <DataState
                 isLoading={transactionsQuery.isLoading}
                 isError={transactionsQuery.isError}

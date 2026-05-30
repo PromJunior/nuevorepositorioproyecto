@@ -8,7 +8,7 @@ from io import BytesIO
 from typing import Optional
 
 from sqlalchemy.orm import Session, joinedload
-from sqlalchemy import func
+from sqlalchemy import Date, func
 
 from models.model import (
     Order, OrderItem, Payment, PaymentMethod,
@@ -144,6 +144,154 @@ def get_kardex_report(
 
 
 # ─── REPORTE DE CAJA ──────────────────────────────────────────────────────────
+def _empty_daily_row(day: date) -> dict:
+    return {
+        "date": day,
+        "stock_entries": 0,
+        "stock_outputs": 0,
+        "stock_adjustments": 0,
+        "net_stock_movement": 0,
+        "sales_count": 0,
+        "sales_amount": Decimal("0.00"),
+    }
+
+
+def _as_date(value) -> date:
+    return value.date() if hasattr(value, "date") else value
+
+
+def _previous_balance(db: Session, tx: InventoryTransaction) -> Optional[int]:
+    previous = (
+        db.query(InventoryTransaction.balance_stock)
+        .filter(
+            InventoryTransaction.product_id == tx.product_id,
+            InventoryTransaction.id < tx.id,
+        )
+        .order_by(InventoryTransaction.id.desc())
+        .first()
+    )
+    return previous[0] if previous else None
+
+
+def get_kardex_daily_summary(
+    db: Session,
+    date_from: Optional[date] = None,
+    date_to: Optional[date] = None,
+    product_id: Optional[int] = None,
+    user_id: Optional[int] = None,
+    payment_method_id: Optional[int] = None,
+    category_id: Optional[int] = None,
+    source_type: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 500,
+) -> tuple[int, list]:
+    rows_by_date: dict[date, dict] = {}
+
+    tx_query = (
+        db.query(InventoryTransaction)
+        .join(
+            InventoryTransactionType,
+            InventoryTransaction.transaction_type_id == InventoryTransactionType.id,
+        )
+        .join(Product, Product.id == InventoryTransaction.product_id)
+    )
+    if date_from:
+        tx_query = tx_query.filter(InventoryTransaction.created_at >= _dt_from(date_from))
+    if date_to:
+        tx_query = tx_query.filter(InventoryTransaction.created_at <= _dt_to(date_to))
+    if product_id:
+        tx_query = tx_query.filter(InventoryTransaction.product_id == product_id)
+    if user_id:
+        tx_query = tx_query.filter(InventoryTransaction.user_id == user_id)
+    if category_id:
+        tx_query = tx_query.filter(Product.category_id == category_id)
+    if source_type:
+        tx_query = tx_query.filter(InventoryTransaction.source_type == source_type)
+    if payment_method_id:
+        tx_query = (
+            tx_query.join(
+                Order,
+                (InventoryTransaction.source_type == "orders")
+                & (InventoryTransaction.source_id == Order.id),
+            )
+            .join(Payment, Payment.order_id == Order.id)
+            .filter(Payment.id_payment_method == payment_method_id)
+            .distinct()
+        )
+
+    transactions = tx_query.order_by(
+        InventoryTransaction.created_at.asc(),
+        InventoryTransaction.id.asc(),
+    ).all()
+
+    for tx in transactions:
+        day = tx.created_at.date()
+        row = rows_by_date.setdefault(day, _empty_daily_row(day))
+        tx_type = (tx.transaction_type.name if tx.transaction_type else "").upper()
+        qty = int(tx.quantity or tx.movement or 0)
+
+        if tx_type == "ENTRADA":
+            row["stock_entries"] += qty
+        elif tx_type == "SALIDA":
+            row["stock_outputs"] += qty
+        elif tx_type == "AJUSTE":
+            previous_balance = _previous_balance(db, tx)
+            delta = int(tx.balance_stock or 0) - int(previous_balance or 0)
+            row["stock_adjustments"] += delta
+            if delta >= 0:
+                row["stock_entries"] += delta
+            else:
+                row["stock_outputs"] += abs(delta)
+
+    order_day = func.cast(Order.order_date, Date)
+    if product_id or category_id:
+        sales_query = (
+            db.query(
+                order_day.label("day"),
+                func.count(func.distinct(Order.id)).label("sales_count"),
+                func.coalesce(func.sum(OrderItem.sub_amount), 0).label("sales_amount"),
+            )
+            .join(OrderItem, OrderItem.order_id == Order.id)
+            .join(Product, Product.id == OrderItem.product_id)
+        )
+    else:
+        sales_query = db.query(
+            order_day.label("day"),
+            func.count(Order.id).label("sales_count"),
+            func.coalesce(func.sum(Order.total_amount), 0).label("sales_amount"),
+        )
+    if date_from:
+        sales_query = sales_query.filter(Order.order_date >= _dt_from(date_from))
+    if date_to:
+        sales_query = sales_query.filter(Order.order_date <= _dt_to(date_to))
+    if user_id:
+        sales_query = sales_query.filter(Order.user_id == user_id)
+    if product_id:
+        sales_query = sales_query.filter(OrderItem.product_id == product_id)
+    if category_id:
+        sales_query = sales_query.filter(Product.category_id == category_id)
+    if payment_method_id:
+        sales_query = sales_query.join(Payment, Payment.order_id == Order.id).filter(
+            Payment.id_payment_method == payment_method_id
+        )
+
+    for day, sales_count, sales_amount in sales_query.group_by(order_day).all():
+        day = _as_date(day)
+        row = rows_by_date.setdefault(day, _empty_daily_row(day))
+        row["sales_count"] = int(sales_count or 0)
+        row["sales_amount"] = Decimal(str(sales_amount or 0))
+
+    rows = []
+    for row in rows_by_date.values():
+        row["net_stock_movement"] = row["stock_entries"] - row["stock_outputs"]
+        row["sales_amount"] = Decimal(str(row["sales_amount"] or 0))
+        rows.append(row)
+
+    rows.sort(key=lambda item: item["date"], reverse=True)
+    total = len(rows)
+    return total, rows[skip:skip + limit]
+
+
 def get_cash_report(
     db: Session,
     date_from: Optional[date] = None,
@@ -344,6 +492,51 @@ def generate_kardex_excel(rows: list) -> BytesIO:
     return output
 
 
+def generate_kardex_daily_excel(rows: list, filters: Optional[dict] = None) -> BytesIO:
+    import openpyxl
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Kardex Diario"
+    headers = [
+        "Fecha", "Entradas Stock", "Salidas Stock", "Ajustes",
+        "Saldo Neto", "Ventas", "Monto Vendido (S/.)",
+    ]
+    widths = [14, 18, 18, 12, 14, 10, 20]
+    _style_header(ws, headers, widths)
+    for r in rows:
+        ws.append([
+            r["date"].strftime("%d/%m/%Y") if r.get("date") else "",
+            r.get("stock_entries", 0),
+            r.get("stock_outputs", 0),
+            r.get("stock_adjustments", 0),
+            r.get("net_stock_movement", 0),
+            r.get("sales_count", 0),
+            float(r.get("sales_amount", 0)),
+        ])
+    ws.append([])
+    ws.append([
+        "TOTAL",
+        sum(int(r.get("stock_entries", 0)) for r in rows),
+        sum(int(r.get("stock_outputs", 0)) for r in rows),
+        sum(int(r.get("stock_adjustments", 0)) for r in rows),
+        sum(int(r.get("net_stock_movement", 0)) for r in rows),
+        sum(int(r.get("sales_count", 0)) for r in rows),
+        sum(float(r.get("sales_amount", 0)) for r in rows),
+    ])
+
+    if filters:
+        filters_ws = wb.create_sheet("Filtros")
+        filters_ws.append(["Filtro", "Valor"])
+        for key, value in filters.items():
+            if value not in (None, ""):
+                filters_ws.append([key, str(value)])
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    return output
+
+
 def generate_cash_excel(rows: list) -> BytesIO:
     import openpyxl
     wb = openpyxl.Workbook()
@@ -373,7 +566,13 @@ def generate_cash_excel(rows: list) -> BytesIO:
 
 
 # ─── GENERADORES PDF ──────────────────────────────────────────────────────────
-def _build_pdf(title: str, headers: list, data_rows: list, landscape_mode: bool = True) -> BytesIO:
+def _build_pdf(
+    title: str,
+    headers: list,
+    data_rows: list,
+    landscape_mode: bool = True,
+    filters: Optional[dict] = None,
+) -> BytesIO:
     """Genera un PDF con tabla de datos usando reportlab."""
     from reportlab.lib.pagesizes import A4, landscape as rl_landscape
     from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -397,6 +596,15 @@ def _build_pdf(title: str, headers: list, data_rows: list, landscape_mode: bool 
         f"Generado: {datetime.now().strftime('%d/%m/%Y %H:%M')}",
         ParagraphStyle("sub", parent=styles["Normal"], fontSize=8, textColor=colors.grey),
     ))
+    if filters:
+        filter_text = " | ".join(
+            f"{key}: {value}" for key, value in filters.items() if value not in (None, "")
+        )
+        if filter_text:
+            elements.append(Paragraph(
+                f"Filtros: {filter_text}",
+                ParagraphStyle("filters", parent=styles["Normal"], fontSize=8, textColor=colors.grey),
+            ))
     elements.append(Spacer(1, 0.4*cm))
 
     # Tabla
@@ -473,6 +681,32 @@ def generate_kardex_pdf(rows: list) -> BytesIO:
         for r in rows
     ]
     return _build_pdf("Reporte Kardex", headers, data)
+
+
+def generate_kardex_daily_pdf(rows: list, filters: Optional[dict] = None) -> BytesIO:
+    headers = ["Fecha", "Entradas", "Salidas", "Ajustes", "Saldo Neto", "Ventas", "Monto"]
+    data = [
+        [
+            r["date"].strftime("%d/%m/%Y") if r.get("date") else "",
+            r.get("stock_entries", 0),
+            r.get("stock_outputs", 0),
+            r.get("stock_adjustments", 0),
+            r.get("net_stock_movement", 0),
+            r.get("sales_count", 0),
+            f"S/. {float(r.get('sales_amount', 0)):.2f}",
+        ]
+        for r in rows
+    ]
+    totals = [
+        "TOTAL",
+        sum(int(r.get("stock_entries", 0)) for r in rows),
+        sum(int(r.get("stock_outputs", 0)) for r in rows),
+        sum(int(r.get("stock_adjustments", 0)) for r in rows),
+        sum(int(r.get("net_stock_movement", 0)) for r in rows),
+        sum(int(r.get("sales_count", 0)) for r in rows),
+        f"S/. {sum(float(r.get('sales_amount', 0)) for r in rows):.2f}",
+    ]
+    return _build_pdf("Resumen Diario Kardex", headers, data + [totals], filters=filters)
 
 
 def generate_cash_pdf(rows: list) -> BytesIO:

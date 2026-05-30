@@ -4,6 +4,7 @@ import { kardexService } from '../services/kardexService';
 // ─── Query Keys ──────────────────────────────────────────────────────────────
 export const kardexKeys = {
     transactions: (params) => ['kardex', 'transactions', params],
+    dailySummary: (params) => ['kardex', 'daily-summary', params],
     productKardex: (productId) => ['kardex', 'product', productId],
     summary: ['kardex', 'summary'],
     lowStock: (threshold) => ['kardex', 'low-stock', threshold],
@@ -20,6 +21,14 @@ export const useInventoryTransactions = (params = {}) =>
         queryFn: () => kardexService.getTransactions(params),
         staleTime: 1000 * 30,
         placeholderData: (prev) => prev,  // mantener datos anteriores al paginar
+    });
+
+export const useKardexDailySummary = (params = {}) =>
+    useQuery({
+        queryKey: kardexKeys.dailySummary(params),
+        queryFn: () => kardexService.getDailySummary(params),
+        staleTime: 1000 * 30,
+        placeholderData: (prev) => prev,
     });
 
 // ─── Kardex por Producto ──────────────────────────────────────────────────────
