@@ -39,7 +39,13 @@ setup_cors(app)
 def root():
     return {"message": "Bienvenido al sistema de ventas"}
 
-from database.seed import create_initial_admin, seed_purchase_statuses
+from database.seed import (
+    create_initial_admin,
+    ensure_payment_method_columns,
+    ensure_settings_integration_columns,
+    seed_payment_methods,
+    seed_purchase_statuses,
+)
 from database.database import SessionLocal, Base, engine
 import models.model  # noqa: F401  — asegura que todos los modelos estén registrados
 
@@ -49,7 +55,10 @@ def startup_event():
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        ensure_payment_method_columns(db)
+        ensure_settings_integration_columns(db)
         create_initial_admin(db)
         seed_purchase_statuses(db)
+        seed_payment_methods(db)
     finally:
         db.close()

@@ -9,15 +9,17 @@ import { ClientSelector } from '../components/ClientSelector';
 import { QuickClientModal } from '../components/QuickClientModal';
 import { useCreateClient, useCreateSale, usePaymentMethods, useSalesProducts, useSearchClient } from '../hooks/useSales';
 import { formatCurrency } from '../../../shared/utils/formatters';
+import { useRuntimeSettings } from '../../settings/hooks/useSettings';
 
 const MySwal = withReactContent(Swal);
-const COUNTER_CLIENT = { id: 4, full_name: 'Venta Mostrador' };
+const COUNTER_CLIENT = { id: null, full_name: 'Venta Mostrador' };
 
 const SalesPage = () => {
     const productsQuery = useSalesProducts();
     const paymentMethodsQuery = usePaymentMethods();
     const createSaleMutation = useCreateSale();
     const createClientMutation = useCreateClient();
+    const runtimeQuery = useRuntimeSettings();
 
     const items = useSalesCartStore((state) => state.items);
     const addItem = useSalesCartStore((state) => state.addItem);
@@ -28,6 +30,7 @@ const SalesPage = () => {
 
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
     const [selectedClient, setSelectedClient] = useState(COUNTER_CLIENT);
+    const [discountPercent, setDiscountPercent] = useState(0);
     const [dniSearch, setDniSearch] = useState('');
 
     // Estados de búsqueda DNI
@@ -46,7 +49,9 @@ const SalesPage = () => {
     const paymentMethods = useMemo(() => paymentMethodsQuery.data || [], [paymentMethodsQuery.data]);
     const products = useMemo(() => productsQuery.data || [], [productsQuery.data]);
     const total = useMemo(() => items.reduce((sum, item) => sum + Number(item.price) * Number(item.quantity), 0), [items]);
-    const effectivePaymentMethod = selectedPaymentMethod ?? paymentMethods[0]?.id ?? null;
+    const salesSettings = runtimeQuery.data?.sales || {};
+    const fiscalSettings = runtimeQuery.data?.fiscal || {};
+    const effectivePaymentMethod = selectedPaymentMethod ?? salesSettings.default_payment_method_id ?? paymentMethods[0]?.id ?? null;
 
     useEffect(() => {
         if (products.length > 0) syncStock(products);
@@ -148,8 +153,9 @@ const SalesPage = () => {
 
         try {
             await createSaleMutation.mutateAsync({
-                client_id: selectedClient.id,
+                client_id: selectedClient.id || undefined,
                 payment_method_id: effectivePaymentMethod,
+                discount_percent: Number(discountPercent || 0),
                 items: items.map((item) => ({
                     product_id: item.product_id,
                     quantity: Number(item.quantity),
@@ -207,6 +213,11 @@ const SalesPage = () => {
                     paymentMethods={paymentMethods}
                     selectedPaymentMethod={effectivePaymentMethod}
                     onPaymentMethodChange={setSelectedPaymentMethod}
+                    discountPercent={discountPercent}
+                    onDiscountPercentChange={setDiscountPercent}
+                    maxDiscountPercent={Number(salesSettings.max_discount_percent || 0)}
+                    allowManualDiscount={Boolean(salesSettings.allow_manual_discount)}
+                    currency={fiscalSettings.currency || 'PEN'}
                     selectedClient={selectedClient}
                     onQuantityChange={updateQuantity}
                     onRemove={removeItem}

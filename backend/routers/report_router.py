@@ -13,6 +13,14 @@ from schemas.report_schema import (
 )
 from schemas.client_schema import ClientCrmRow
 from crud import report_crud
+from crud.settings_crud import get_fiscal_settings, get_or_create_company_settings
+
+
+def _report_company(db: Session):
+    company = get_or_create_company_settings(db)
+    fiscal = get_fiscal_settings(db)
+    company.currency_symbol = fiscal.get("currency_symbol", "S/")
+    return company
 
 router = APIRouter(tags=["Reports / Exportaciones"])
 
@@ -81,7 +89,8 @@ def export_sales_excel(
     _, rows = report_crud.get_sales_report(db, date_from=date_from, date_to=date_to,
                                            user_id=user_id, client_id=client_id,
                                            payment_method_id=payment_method_id, limit=5000)
-    buffer = report_crud.generate_sales_excel(rows)
+    company = _report_company(db)
+    buffer = report_crud.generate_sales_excel(rows, company=company)
     return _excel_response(buffer, "reporte_ventas.xlsx")
 
 
@@ -98,7 +107,8 @@ def export_sales_pdf(
     _, rows = report_crud.get_sales_report(db, date_from=date_from, date_to=date_to,
                                            user_id=user_id, client_id=client_id,
                                            payment_method_id=payment_method_id, limit=2000)
-    buffer = report_crud.generate_sales_pdf(rows)
+    company = _report_company(db)
+    buffer = report_crud.generate_sales_pdf(rows, company=company)
     return _pdf_response(buffer, "reporte_ventas.pdf")
 
 
@@ -135,7 +145,8 @@ def export_purchases_excel(
 ):
     _, rows = report_crud.get_purchases_report(db, date_from=date_from, date_to=date_to,
                                                status=status, limit=5000)
-    return _excel_response(report_crud.generate_purchases_excel(rows), "reporte_compras.xlsx")
+    company = _report_company(db)
+    return _excel_response(report_crud.generate_purchases_excel(rows, company=company), "reporte_compras.xlsx")
 
 
 @router.get("/reports/purchases/export/pdf")
@@ -148,7 +159,8 @@ def export_purchases_pdf(
 ):
     _, rows = report_crud.get_purchases_report(db, date_from=date_from, date_to=date_to,
                                                status=status, limit=2000)
-    return _pdf_response(report_crud.generate_purchases_pdf(rows), "reporte_compras.pdf")
+    company = _report_company(db)
+    return _pdf_response(report_crud.generate_purchases_pdf(rows, company=company), "reporte_compras.pdf")
 
 
 # ══════════════════════════════════════════════════════════════
@@ -228,7 +240,7 @@ def export_kardex_daily_excel(
     }
     _, rows = report_crud.get_kardex_daily_summary(db, **filters, limit=5000)
     return _excel_response(
-        report_crud.generate_kardex_daily_excel(rows, filters),
+        report_crud.generate_kardex_daily_excel(rows, filters, company=_report_company(db)),
         "resumen_diario_kardex.xlsx",
     )
 
@@ -256,7 +268,7 @@ def export_kardex_daily_pdf(
     }
     _, rows = report_crud.get_kardex_daily_summary(db, **filters, limit=2000)
     return _pdf_response(
-        report_crud.generate_kardex_daily_pdf(rows, filters),
+        report_crud.generate_kardex_daily_pdf(rows, filters, company=_report_company(db)),
         "resumen_diario_kardex.pdf",
     )
 
@@ -273,7 +285,7 @@ def export_kardex_excel(
     _, rows = report_crud.get_kardex_report(db, date_from=date_from, date_to=date_to,
                                             product_id=product_id,
                                             transaction_type=transaction_type, limit=5000)
-    return _excel_response(report_crud.generate_kardex_excel(rows), "reporte_kardex.xlsx")
+    return _excel_response(report_crud.generate_kardex_excel(rows, company=_report_company(db)), "reporte_kardex.xlsx")
 
 
 @router.get("/reports/kardex/export/pdf")
@@ -286,7 +298,7 @@ def export_kardex_pdf(
 ):
     _, rows = report_crud.get_kardex_report(db, date_from=date_from, date_to=date_to,
                                             product_id=product_id, limit=2000)
-    return _pdf_response(report_crud.generate_kardex_pdf(rows), "reporte_kardex.pdf")
+    return _pdf_response(report_crud.generate_kardex_pdf(rows, company=_report_company(db)), "reporte_kardex.pdf")
 
 
 # ══════════════════════════════════════════════════════════════
@@ -329,7 +341,7 @@ def export_cash_excel(
         user_id=user_id, status=status, payment_method_id=payment_method_id,
         limit=5000,
     )
-    return _excel_response(report_crud.generate_cash_excel(rows), "reporte_caja.xlsx")
+    return _excel_response(report_crud.generate_cash_excel(rows, company=_report_company(db)), "reporte_caja.xlsx")
 
 
 @router.get("/reports/cash/export/pdf")
@@ -347,7 +359,7 @@ def export_cash_pdf(
         user_id=user_id, status=status, payment_method_id=payment_method_id,
         limit=2000,
     )
-    return _pdf_response(report_crud.generate_cash_pdf(rows), "reporte_caja.pdf")
+    return _pdf_response(report_crud.generate_cash_pdf(rows, company=_report_company(db)), "reporte_caja.pdf")
 
 
 # CRM
@@ -397,7 +409,7 @@ def export_crm_excel(
         payment_method_id=payment_method_id,
         limit=5000,
     )
-    return _excel_response(report_crud.generate_crm_excel(rows), "reporte_crm.xlsx")
+    return _excel_response(report_crud.generate_crm_excel(rows, company=_report_company(db)), "reporte_crm.xlsx")
 
 
 @router.get("/reports/crm/export/pdf")
@@ -419,7 +431,7 @@ def export_crm_pdf(
         payment_method_id=payment_method_id,
         limit=2000,
     )
-    return _pdf_response(report_crud.generate_crm_pdf(rows), "reporte_crm.pdf")
+    return _pdf_response(report_crud.generate_crm_pdf(rows, company=_report_company(db)), "reporte_crm.pdf")
 
 
 @router.get("/reports/crm/export/csv")

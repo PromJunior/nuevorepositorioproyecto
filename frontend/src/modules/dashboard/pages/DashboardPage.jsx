@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Package, ShoppingCart, Wallet, Zap } from 'lucide-react';
+import { Building2, Package, ShoppingCart, Wallet, Zap } from 'lucide-react';
 import { PageHeader } from '../../../shared/components/PageHeader';
 import { DataState } from '../../../shared/components/DataState';
 import { Card } from '../../../shared/components/ui/card';
@@ -50,12 +50,50 @@ const QuickActions = () => (
     </Card>
 );
 
+const CompanyCard = ({ company }) => {
+    if (!company) return null;
+    const name = company.trade_name || company.legal_name || 'Empresa';
+
+    return (
+        <Card className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500">
+                    {company.logo_url ? (
+                        <img src={company.logo_url} alt={name} className="h-full w-full rounded-xl object-contain p-1" />
+                    ) : (
+                        <Building2 size={24} />
+                    )}
+                </div>
+                <div className="min-w-0">
+                    <p className="truncate text-lg font-black text-slate-900">{name}</p>
+                    <p className="truncate text-sm font-semibold text-slate-500">{company.legal_name}</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-slate-400">{company.ruc ? `RUC ${company.ruc}` : 'RUC pendiente'}</p>
+                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 text-sm sm:flex">
+                <div className="rounded-lg bg-slate-50 px-3 py-2">
+                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Moneda</span>
+                    <span className="font-black text-slate-800">{company.primary_currency}</span>
+                </div>
+                <div className="rounded-lg bg-slate-50 px-3 py-2">
+                    <span className="block text-[10px] font-black uppercase tracking-wider text-slate-400">Direccion</span>
+                    <span className="font-bold text-slate-600">{company.address || 'Pendiente'}</span>
+                </div>
+            </div>
+        </Card>
+    );
+};
+
 const DashboardPage = () => {
     const role = useAuthStore((s) => s.role);
     const [paymentMethodId, setPaymentMethodId] = useState('');
     const [userId, setUserId] = useState('');
     const dashboardFilters = { payment_method_id: paymentMethodId, user_id: userId };
     const summaryQuery = useDashboardSummary(dashboardFilters);
+    const dashboardSettings = summaryQuery.data?.dashboard_settings || {};
+    const visibleKpis = dashboardSettings.visible_kpis || [];
+    const visibleCharts = dashboardSettings.visible_charts || [];
+    const showWidget = (id) => visibleCharts.length === 0 || visibleCharts.includes(id);
 
     return (
         <div className="min-h-screen space-y-6 bg-slate-50/40 p-6">
@@ -84,6 +122,8 @@ const DashboardPage = () => {
                 </div>
             </Card>
 
+            <CompanyCard company={summaryQuery.data?.company} />
+
             {/* ─── KPI Cards ──────────────────────────────────────── */}
             <DataState
                 isLoading={summaryQuery.isLoading}
@@ -92,40 +132,52 @@ const DashboardPage = () => {
                 errorTitle="No se pudieron cargar los KPIs"
                 errorDescription={summaryQuery.error?.response?.data?.detail || summaryQuery.error?.message}
             >
-                <DashboardKpiCards summary={summaryQuery.data} />
+                <DashboardKpiCards summary={summaryQuery.data} visibleKpis={visibleKpis} />
             </DataState>
 
             {/* ─── Alertas bajo stock (si hay) ────────────────────── */}
-            <LowStockTable />
+            {showWidget('low_stock') && <LowStockTable threshold={summaryQuery.data?.low_stock_threshold} />}
 
             {/* ─── Gráficos principales ───────────────────────────── */}
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-                <div className="min-w-0 xl:col-span-2">
-                    <SalesChart filters={dashboardFilters} />
+            {(showWidget('sales_chart') || showWidget('payment_methods')) && (
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+                    {showWidget('sales_chart') && (
+                        <div className="min-w-0 xl:col-span-2">
+                            <SalesChart filters={dashboardFilters} />
+                        </div>
+                    )}
+                    {showWidget('payment_methods') && <PaymentMethodsChart filters={dashboardFilters} />}
                 </div>
-                <PaymentMethodsChart filters={dashboardFilters} />
-            </div>
+            )}
 
             {/* ─── Top productos + Top clientes ───────────────────── */}
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                <TopProductsTable filters={dashboardFilters} />
-                <ClientSegmentationChart filters={dashboardFilters} />
-            </div>
+            {(showWidget('top_products') || showWidget('client_segmentation')) && (
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                    {showWidget('top_products') && <TopProductsTable filters={dashboardFilters} />}
+                    {showWidget('client_segmentation') && <ClientSegmentationChart filters={dashboardFilters} />}
+                </div>
+            )}
 
-            <div className="grid grid-cols-1 gap-6">
-                <TopClientsTable filters={dashboardFilters} />
-            </div>
+            {showWidget('top_clients') && (
+                <div className="grid grid-cols-1 gap-6">
+                    <TopClientsTable filters={dashboardFilters} />
+                </div>
+            )}
 
             {/* ─── Ventas recientes + Accesos rápidos ─────────────── */}
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-                <div className="xl:col-span-2">
-                    <RecentSalesTable filters={dashboardFilters} />
+            {(showWidget('recent_sales') || showWidget('quick_actions')) && (
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
+                    {showWidget('recent_sales') && (
+                        <div className="xl:col-span-2">
+                            <RecentSalesTable filters={dashboardFilters} />
+                        </div>
+                    )}
+                    {showWidget('quick_actions') && <QuickActions />}
                 </div>
-                <QuickActions />
-            </div>
+            )}
 
             {/* ─── Compras recientes (solo admin) ─────────────────── */}
-            {role === 'admin' && (
+            {role === 'admin' && showWidget('recent_purchases') && (
                 <RecentPurchasesTable />
             )}
         </div>

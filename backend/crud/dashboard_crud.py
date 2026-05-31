@@ -19,6 +19,8 @@ from models.model import (
     User,
 )
 from crud.crm_crud import get_crm_summary, get_client_segment_stats
+from crud.settings_crud import get_or_create_company_settings
+from crud.settings_crud import get_dashboard_settings, get_fiscal_settings
 
 PERU_TZ = pytz.timezone("America/Lima")
 
@@ -136,6 +138,10 @@ def get_dashboard_summary(
         sales_in_session = _apply_user_filter(sales_in_session, user_id).scalar() or 0
         open_expected = Decimal(str(open_session.opening_amount)) + Decimal(str(sales_in_session))
 
+    company = get_or_create_company_settings(db)
+    dashboard_settings = get_dashboard_settings(db)
+    fiscal_settings = get_fiscal_settings(db)
+
     return {
         "sales_today": Decimal(str(sales_today)),
         "orders_today": orders_today,
@@ -156,6 +162,10 @@ def get_dashboard_summary(
         "total_suppliers": total_suppliers,
         "has_open_session": has_open,
         "open_session_expected": open_expected,
+        "company": company,
+        "dashboard_settings": dashboard_settings,
+        "fiscal_settings": fiscal_settings,
+        "low_stock_threshold": inv.get("low_stock_threshold", 5),
     }
 
 

@@ -6,9 +6,9 @@ import { Button } from '../../../shared/components/ui/button';
 import { formatNumber } from '../../../shared/utils/formatters';
 import { useLowStock } from '../hooks/useDashboard';
 
-export const LowStockTable = () => {
+export const LowStockTable = ({ threshold = 5 }) => {
     const navigate = useNavigate();
-    const { data: products = [], isLoading } = useLowStock(5);
+    const { data: products = [], isLoading } = useLowStock(threshold || 5);
 
     if (isLoading) return null;
     if (products.length === 0) return null;

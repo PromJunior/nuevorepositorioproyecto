@@ -8,13 +8,13 @@ import { Input } from '../../../shared/components/ui/input';
  * Formulario de apertura de caja.
  * Recibe `onOpen(amount)` y `isLoading`.
  */
-export const OpenSessionForm = ({ onOpen, isLoading }) => {
-    const [amount, setAmount] = useState('');
+export const OpenSessionForm = ({ onOpen, isLoading, minimumAmount = 0, suggestedAmount = 0 }) => {
+    const [amount, setAmount] = useState(suggestedAmount ? String(suggestedAmount) : '');
 
     const handleSubmit = (e) => {
         e.preventDefault();
         const value = parseFloat(amount);
-        if (isNaN(value) || value < 0) return;
+        if (isNaN(value) || value < minimumAmount) return;
         onOpen(value);
     };
 
@@ -31,14 +31,14 @@ export const OpenSessionForm = ({ onOpen, isLoading }) => {
             <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <div className="flex-1 space-y-1.5">
                     <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        Monto inicial (S/.)
+                        Monto inicial (S/.) minimo {minimumAmount.toFixed(2)}
                     </label>
                     <div className="relative">
                         <span className="absolute left-3.5 top-2.5 text-sm font-bold text-slate-400">S/</span>
                         <Input
                             type="number"
                             step="0.01"
-                            min="0"
+                            min={minimumAmount}
                             placeholder="0.00"
                             className="pl-9 font-mono"
                             value={amount}

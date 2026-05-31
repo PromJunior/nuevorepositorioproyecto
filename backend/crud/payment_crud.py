@@ -4,7 +4,12 @@ from models.model import PaymentMethod
 from schemas.payment_method_schema import PaymentMethodData
 
 def get_payment_method(db:Session):
-    return db.query(PaymentMethod).order_by(PaymentMethod.id.desc()).all()
+    return (
+        db.query(PaymentMethod)
+        .filter(PaymentMethod.is_active == True)  # noqa: E712
+        .order_by(PaymentMethod.display_order.asc(), PaymentMethod.id.asc())
+        .all()
+    )
 
 def create_payment_method(db: Session, payment_method: PaymentMethodData):
     db_pm = PaymentMethod(name_payment_method=payment_method.name_payment_method)

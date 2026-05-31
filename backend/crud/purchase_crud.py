@@ -6,6 +6,7 @@ from models.model import Purchase, PurchaseItem, PurchaseStatus, Product
 from schemas.purchase_schema import PurchaseCreate, PurchaseDetailResponse, PurchaseItemFull, SupplierInfo, PurchaseStatusInfo
 from services.inventory_service import KardexService
 from core.exceptions import ProductNotFoundError
+from crud.settings_crud import get_fiscal_settings, next_document_number
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -50,7 +51,11 @@ def _build_detail(purchase: Purchase) -> dict:
     return PurchaseDetailResponse(
         id=purchase.id,
         purchase_date=purchase.purchase_date,
+        document_number=purchase.document_number,
         invoice_number=purchase.invoice_number,
+        subtotal_amount=purchase.subtotal_amount or 0,
+        tax_amount=purchase.tax_amount or 0,
+        igv_percent=purchase.igv_percent or 0,
         total_amount=purchase.total_amount,
         supplier_id=purchase.supplier_id,
         supplier=supplier_info,
@@ -77,12 +82,19 @@ def _full_query(db: Session):
 def create_purchase_draft(db: Session, purchase_create: PurchaseCreate, user_id: int) -> Purchase:
     try:
         borrador = _get_status_by_name(db, "BORRADOR")
-        total_amount = Decimal("0")
+        subtotal_amount = Decimal("0")
+        fiscal = get_fiscal_settings(db)
+        igv_percent = Decimal(str(fiscal.get("igv_percent", 18)))
+        document_number = next_document_number(db, "purchase")
 
         new_purchase = Purchase(
             supplier_id=purchase_create.supplier_id,
             user_id=user_id,
+            document_number=document_number,
             invoice_number=purchase_create.invoice_number,
+            subtotal_amount=0,
+            tax_amount=0,
+            igv_percent=igv_percent,
             total_amount=0,
             status_id=borrador.id,
         )
@@ -96,7 +108,7 @@ def create_purchase_draft(db: Session, purchase_create: PurchaseCreate, user_id:
 
             unit_cost = Decimal(str(item.unit_cost))
             sub_amount = Decimal(str(item.quantity)) * unit_cost
-            total_amount += sub_amount
+            subtotal_amount += sub_amount
 
             db.add(PurchaseItem(
                 purchase_id=new_purchase.id,
@@ -106,7 +118,10 @@ def create_purchase_draft(db: Session, purchase_create: PurchaseCreate, user_id:
                 sub_amount=sub_amount,
             ))
 
-        new_purchase.total_amount = total_amount
+        tax_amount = (subtotal_amount * igv_percent / Decimal("100")).quantize(Decimal("0.01"))
+        new_purchase.subtotal_amount = subtotal_amount
+        new_purchase.tax_amount = tax_amount
+        new_purchase.total_amount = subtotal_amount + tax_amount
         db.commit()
         db.refresh(new_purchase)
 

@@ -22,6 +22,11 @@ class OrderItemDetalle(BaseModel):
 class OrderResponse(BaseModel):
     id: int
     order_date: datetime
+    document_number: Optional[str] = None
+    subtotal_amount: float = 0
+    tax_amount: float = 0
+    igv_percent: float = 0
+    discount_amount: float = 0
     total_amount: float
     client: Optional[ClientResponse] = None
     payment_method: Optional[PaymentMethodResponse] = None
@@ -40,6 +45,11 @@ class OrderResponse(BaseModel):
         return {
             "id": getattr(data, "id", None),
             "order_date": getattr(data, "order_date", None),
+            "document_number": getattr(data, "document_number", None),
+            "subtotal_amount": getattr(data, "subtotal_amount", 0),
+            "tax_amount": getattr(data, "tax_amount", 0),
+            "igv_percent": getattr(data, "igv_percent", 0),
+            "discount_amount": getattr(data, "discount_amount", 0),
             "total_amount": getattr(data, "total_amount", None),
             "client": getattr(data, "client", None),
             "payment_method": getattr(payment, "payment_method", None) if payment else None,
@@ -52,9 +62,10 @@ class OrderItemCreate(BaseModel):
     price: float
 
 class OrderCreate(BaseModel):
-    client_id: int
+    client_id: Optional[int] = None
     items: List[OrderItemCreate]
-    payment_method_id: int
+    payment_method_id: Optional[int] = None
+    discount_percent: float = 0
 
 
 class OrderUpdate(OrderCreate):

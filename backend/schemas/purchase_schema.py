@@ -13,7 +13,7 @@ class PurchaseItemCreate(BaseModel):
 
 
 class PurchaseCreate(BaseModel):
-    supplier_id: int
+    supplier_id: Optional[int] = None
     invoice_number: Optional[str] = None
     items: List[PurchaseItemCreate]
 
@@ -62,7 +62,11 @@ class SupplierInfo(BaseModel):
 class PurchaseResponse(BaseModel):
     id: int
     purchase_date: datetime
+    document_number: Optional[str] = None
     invoice_number: Optional[str] = None
+    subtotal_amount: float = 0
+    tax_amount: float = 0
+    igv_percent: float = 0
     total_amount: float
     supplier_id: int
     supplier: Optional[SupplierInfo] = None
@@ -77,7 +81,11 @@ class PurchaseResponse(BaseModel):
 class PurchaseDetailResponse(BaseModel):
     id: int
     purchase_date: datetime
+    document_number: Optional[str] = None
     invoice_number: Optional[str] = None
+    subtotal_amount: Decimal = Decimal("0")
+    tax_amount: Decimal = Decimal("0")
+    igv_percent: Decimal = Decimal("0")
     total_amount: Decimal
     supplier_id: int
     supplier: Optional[SupplierInfo] = None

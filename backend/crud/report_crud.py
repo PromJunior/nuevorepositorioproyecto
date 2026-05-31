@@ -62,10 +62,15 @@ def get_sales_report(
         pm = o.payment_order[0].payment_method.name_payment_method if o.payment_order else None
         result.append({
             "id": o.id,
+            "document_number": o.document_number,
             "order_date": o.order_date,
             "client_name": o.client.full_name if o.client else "Venta Mostrador",
             "seller_name": o.user.username if o.user else f"User#{o.user_id}",
             "items_count": len(o.order_items_order),
+            "subtotal_amount": Decimal(str(o.subtotal_amount or 0)),
+            "tax_amount": Decimal(str(o.tax_amount or 0)),
+            "igv_percent": Decimal(str(o.igv_percent or 0)),
+            "discount_amount": Decimal(str(o.discount_amount or 0)),
             "total_amount": Decimal(str(o.total_amount or 0)),
             "payment_method": pm,
         })
@@ -108,11 +113,15 @@ def get_purchases_report(
     return total, [
         {
             "id": p.id,
+            "document_number": p.document_number,
             "purchase_date": p.purchase_date,
             "supplier_name": p.supplier.company_name if p.supplier else f"Prov#{p.supplier_id}",
             "user_name": p.user.username if p.user else f"User#{p.user_id}",
             "invoice_number": p.invoice_number,
             "items_count": len(p.purchase_items),
+            "subtotal_amount": Decimal(str(p.subtotal_amount or 0)),
+            "tax_amount": Decimal(str(p.tax_amount or 0)),
+            "igv_percent": Decimal(str(p.igv_percent or 0)),
             "total_amount": Decimal(str(p.total_amount or 0)),
             "status_name": p.status.name_status if p.status else None,
         }
@@ -418,19 +427,49 @@ def log_action(
 
 
 # ─── GENERADORES EXCEL ────────────────────────────────────────────────────────
-def _style_header(ws, headers: list, col_widths: list):
+def _style_header(ws, headers: list, col_widths: list, row: int = 1):
     """Aplica estilo a la fila de cabecera."""
     from openpyxl.styles import Font, PatternFill, Alignment
     HEADER_FILL = PatternFill("solid", fgColor="1E3A5F")
     for col, (header, width) in enumerate(zip(headers, col_widths), start=1):
-        cell = ws.cell(row=1, column=col, value=header)
+        cell = ws.cell(row=row, column=col, value=header)
         cell.font = Font(bold=True, color="FFFFFF", size=10)
         cell.fill = HEADER_FILL
         cell.alignment = Alignment(horizontal="center", vertical="center")
-        ws.column_dimensions[ws.cell(row=1, column=col).column_letter].width = width
+        ws.column_dimensions[ws.cell(row=row, column=col).column_letter].width = width
 
 
-def generate_sales_excel(rows: list, title: str = "Reporte de Ventas") -> BytesIO:
+def _company_dict(company) -> dict:
+    if not company:
+        return {}
+    return {
+        "legal_name": getattr(company, "legal_name", None) or "Mi Empresa",
+        "ruc": getattr(company, "ruc", None) or "",
+        "address": getattr(company, "address", None) or "",
+        "logo_url": getattr(company, "logo_url", None) or "",
+        "currency_symbol": getattr(company, "currency_symbol", None) or "S/",
+    }
+
+
+def _money(value, company=None) -> str:
+    symbol = _company_dict(company).get("currency_symbol", "S/")
+    return f"{symbol} {float(value or 0):.2f}"
+
+
+def _add_company_excel_header(ws, title: str, company=None) -> int:
+    from openpyxl.styles import Font
+
+    data = _company_dict(company)
+    if not data:
+        return 1
+    ws.cell(row=1, column=1, value=data["legal_name"]).font = Font(bold=True, size=14)
+    ws.cell(row=2, column=1, value=f"RUC: {data['ruc']}" if data["ruc"] else "RUC:")
+    ws.cell(row=3, column=1, value=f"Direccion: {data['address']}" if data["address"] else "Direccion:")
+    ws.cell(row=4, column=1, value=title).font = Font(bold=True, size=12)
+    return 6
+
+
+def generate_sales_excel(rows: list, title: str = "Reporte de Ventas", company=None) -> BytesIO:
     import openpyxl
     from openpyxl.styles import Alignment
     wb = openpyxl.Workbook()
@@ -438,7 +477,7 @@ def generate_sales_excel(rows: list, title: str = "Reporte de Ventas") -> BytesI
     ws.title = "Ventas"
     headers = ["ID", "Fecha", "Cliente", "Vendedor", "Ítems", "Total (S/.)", "Método Pago"]
     widths  = [8,    20,     30,       18,        8,      16,            20]
-    _style_header(ws, headers, widths)
+    _style_header(ws, headers, widths, row=_add_company_excel_header(ws, title, company))
     for r in rows:
         ws.append([
             r["id"],
@@ -458,14 +497,14 @@ def generate_sales_excel(rows: list, title: str = "Reporte de Ventas") -> BytesI
     return output
 
 
-def generate_purchases_excel(rows: list) -> BytesIO:
+def generate_purchases_excel(rows: list, company=None) -> BytesIO:
     import openpyxl
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Compras"
     headers = ["ID", "Fecha", "Proveedor", "Usuario", "N° Factura", "Ítems", "Total (S/.)", "Estado"]
     widths  = [8,    20,     30,          16,        16,             8,      16,             14]
-    _style_header(ws, headers, widths)
+    _style_header(ws, headers, widths, row=_add_company_excel_header(ws, "Reporte de Compras", company))
     for r in rows:
         ws.append([
             r["id"],
@@ -485,7 +524,7 @@ def generate_purchases_excel(rows: list) -> BytesIO:
     return output
 
 
-def generate_kardex_excel(rows: list) -> BytesIO:
+def generate_kardex_excel(rows: list, company=None) -> BytesIO:
     import openpyxl
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -494,7 +533,7 @@ def generate_kardex_excel(rows: list) -> BytesIO:
                "Cantidad", "Costo Unit.", "Saldo Stock", "Valor Saldo", "Usuario", "Origen"]
     widths  = [8,    20,     30,          18,           10,    25,
                9,          12,           12,             14,            16,       12]
-    _style_header(ws, headers, widths)
+    _style_header(ws, headers, widths, row=_add_company_excel_header(ws, "Reporte Kardex", company))
     for r in rows:
         ws.append([
             r["id"],
@@ -516,7 +555,7 @@ def generate_kardex_excel(rows: list) -> BytesIO:
     return output
 
 
-def generate_kardex_daily_excel(rows: list, filters: Optional[dict] = None) -> BytesIO:
+def generate_kardex_daily_excel(rows: list, filters: Optional[dict] = None, company=None) -> BytesIO:
     import openpyxl
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -526,7 +565,7 @@ def generate_kardex_daily_excel(rows: list, filters: Optional[dict] = None) -> B
         "Saldo Neto", "Ventas", "Monto Vendido (S/.)",
     ]
     widths = [14, 18, 18, 12, 14, 10, 20]
-    _style_header(ws, headers, widths)
+    _style_header(ws, headers, widths, row=_add_company_excel_header(ws, "Resumen Diario Kardex", company))
     for r in rows:
         ws.append([
             r["date"].strftime("%d/%m/%Y") if r.get("date") else "",
@@ -561,7 +600,7 @@ def generate_kardex_daily_excel(rows: list, filters: Optional[dict] = None) -> B
     return output
 
 
-def generate_cash_excel(rows: list) -> BytesIO:
+def generate_cash_excel(rows: list, company=None) -> BytesIO:
     import openpyxl
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -570,7 +609,7 @@ def generate_cash_excel(rows: list) -> BytesIO:
                "Esperado", "Contado", "Diferencia", "Estado"]
     widths  = [8,    16,       20,       20,       14,
                14,       14,       12,          12]
-    _style_header(ws, headers, widths)
+    _style_header(ws, headers, widths, row=_add_company_excel_header(ws, "Reporte de Caja", company))
     for r in rows:
         ws.append([
             r["id"],
@@ -589,14 +628,14 @@ def generate_cash_excel(rows: list) -> BytesIO:
     return output
 
 
-def generate_crm_excel(rows: list) -> BytesIO:
+def generate_crm_excel(rows: list, company=None) -> BytesIO:
     import openpyxl
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "CRM Clientes"
     headers = ["ID", "DNI", "Cliente", "Email", "Telefono", "Segmento", "Recency", "Frecuencia", "Monetary", "Ultima compra"]
     widths = [8, 14, 30, 30, 16, 14, 10, 12, 14, 18]
-    _style_header(ws, headers, widths)
+    _style_header(ws, headers, widths, row=_add_company_excel_header(ws, "Reporte CRM Clientes", company))
     for r in rows:
         ws.append([
             r["id"],
@@ -644,10 +683,11 @@ def _build_pdf(
     data_rows: list,
     landscape_mode: bool = True,
     filters: Optional[dict] = None,
+    company=None,
 ) -> BytesIO:
     """Genera un PDF con tabla de datos usando reportlab."""
     from reportlab.lib.pagesizes import A4, landscape as rl_landscape
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.platypus import Image, SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
     from reportlab.lib import colors
     from reportlab.lib.units import cm
@@ -661,6 +701,20 @@ def _build_pdf(
     )
     styles = getSampleStyleSheet()
     elements = []
+
+    company_data = _company_dict(company)
+    if company_data.get("logo_url"):
+        try:
+            elements.append(Image(company_data["logo_url"], width=2.2*cm, height=2.2*cm))
+        except Exception:
+            pass
+    if company_data:
+        elements.append(Paragraph(company_data["legal_name"], styles["Heading2"]))
+        if company_data.get("ruc"):
+            elements.append(Paragraph(f"RUC: {company_data['ruc']}", styles["Normal"]))
+        if company_data.get("address"):
+            elements.append(Paragraph(f"Direccion: {company_data['address']}", styles["Normal"]))
+        elements.append(Spacer(1, 0.25*cm))
 
     # Título
     elements.append(Paragraph(title, styles["Title"]))
@@ -702,7 +756,7 @@ def _build_pdf(
     return output
 
 
-def generate_sales_pdf(rows: list) -> BytesIO:
+def generate_sales_pdf(rows: list, company=None) -> BytesIO:
     headers = ["ID", "Fecha", "Cliente", "Vendedor", "Ítems", "Total S/.", "Método"]
     data = [
         [
@@ -716,10 +770,10 @@ def generate_sales_pdf(rows: list) -> BytesIO:
         ]
         for r in rows
     ]
-    return _build_pdf("Reporte de Ventas", headers, data)
+    return _build_pdf("Reporte de Ventas", headers, data, company=company)
 
 
-def generate_purchases_pdf(rows: list) -> BytesIO:
+def generate_purchases_pdf(rows: list, company=None) -> BytesIO:
     headers = ["ID", "Fecha", "Proveedor", "Usuario", "Factura", "Ítems", "Total S/.", "Estado"]
     data = [
         [
@@ -734,10 +788,10 @@ def generate_purchases_pdf(rows: list) -> BytesIO:
         ]
         for r in rows
     ]
-    return _build_pdf("Reporte de Compras", headers, data)
+    return _build_pdf("Reporte de Compras", headers, data, company=company)
 
 
-def generate_kardex_pdf(rows: list) -> BytesIO:
+def generate_kardex_pdf(rows: list, company=None) -> BytesIO:
     headers = ["ID", "Fecha", "Producto", "Tipo", "Concepto", "Cant.", "Saldo", "Valor"]
     data = [
         [
@@ -752,10 +806,10 @@ def generate_kardex_pdf(rows: list) -> BytesIO:
         ]
         for r in rows
     ]
-    return _build_pdf("Reporte Kardex", headers, data)
+    return _build_pdf("Reporte Kardex", headers, data, company=company)
 
 
-def generate_kardex_daily_pdf(rows: list, filters: Optional[dict] = None) -> BytesIO:
+def generate_kardex_daily_pdf(rows: list, filters: Optional[dict] = None, company=None) -> BytesIO:
     headers = ["Fecha", "Entradas", "Salidas", "Ajustes", "Saldo Neto", "Ventas", "Monto"]
     data = [
         [
@@ -778,10 +832,10 @@ def generate_kardex_daily_pdf(rows: list, filters: Optional[dict] = None) -> Byt
         sum(int(r.get("sales_count", 0)) for r in rows),
         f"S/. {sum(float(r.get('sales_amount', 0)) for r in rows):.2f}",
     ]
-    return _build_pdf("Resumen Diario Kardex", headers, data + [totals], filters=filters)
+    return _build_pdf("Resumen Diario Kardex", headers, data + [totals], filters=filters, company=company)
 
 
-def generate_cash_pdf(rows: list) -> BytesIO:
+def generate_cash_pdf(rows: list, company=None) -> BytesIO:
     headers = ["ID", "Usuario", "Apertura", "Cierre", "Fondo", "Esperado", "Contado", "Diferencia", "Estado"]
     data = [
         [
@@ -797,10 +851,10 @@ def generate_cash_pdf(rows: list) -> BytesIO:
         ]
         for r in rows
     ]
-    return _build_pdf("Reporte de Caja", headers, data)
+    return _build_pdf("Reporte de Caja", headers, data, company=company)
 
 
-def generate_crm_pdf(rows: list) -> BytesIO:
+def generate_crm_pdf(rows: list, company=None) -> BytesIO:
     headers = ["Cliente", "Segmento", "R", "F", "M", "Ultima compra"]
     data = [
         [
@@ -813,4 +867,4 @@ def generate_crm_pdf(rows: list) -> BytesIO:
         ]
         for r in rows
     ]
-    return _build_pdf("Reporte CRM Clientes", headers, data)
+    return _build_pdf("Reporte CRM Clientes", headers, data, company=company)

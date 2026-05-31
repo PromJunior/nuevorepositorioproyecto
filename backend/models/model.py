@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Boolean, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database.database import Base
@@ -43,6 +43,11 @@ class Order(Base):
 
     id = Column(Integer, autoincrement=True, primary_key=True, index=True)
     order_date = Column(DateTime, default=datetime.utcnow)
+    document_number = Column(String(50), nullable=True, index=True)
+    subtotal_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
+    tax_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
+    igv_percent = Column(Numeric(5, 2), nullable=False, default=18.00)
+    discount_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
     total_amount = Column(Numeric(10, 2))
 
     # estado activo o inactivo para permitir anulaciones sin eliminar registros, útil para auditorías o seguimiento histórico de ventas
@@ -123,6 +128,7 @@ class PaymentMethod(Base):
     affects_cash_closing = Column(Boolean, default=False) # para identificar métodos de pago que afectan el cierre de caja, útil para reportes de caja y conciliaciones bancarias
     requires_reference = Column(Boolean, default=False) # para identificar métodos de pago que requieren referencia o comprobante, útil para validaciones en el proceso de venta
     is_active = Column(Boolean, default=True) # para habilitar o deshabilitar métodos de pago sin eliminarlos de la base de datos, útil para promociones o cambios en las opciones de pago
+    display_order = Column(Integer, default=0)
     
     payments_pm = relationship("Payment", back_populates="payment_method")
 
@@ -186,7 +192,11 @@ class Purchase(Base):
     id = Column(Integer, autoincrement=True, primary_key=True, index=True)
     
     purchase_date = Column(DateTime, default=datetime.utcnow)
+    document_number = Column(String(50), nullable=True, index=True)
     invoice_number = Column(String(50), nullable=True) # Nro de Comprobante para auditorías o seguimiento contable como facturas, boletas, etc.
+    subtotal_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
+    tax_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
+    igv_percent = Column(Numeric(5, 2), nullable=False, default=18.00)
     total_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -359,3 +369,38 @@ class AuditLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", foreign_keys=[user_id])
+
+
+#-----------------------> CONFIGURACION GLOBAL DEL ERP <------------------------
+class CompanySettings(Base):
+    __tablename__ = "company_settings"
+
+    id = Column(Integer, autoincrement=True, primary_key=True, index=True)
+    singleton_key = Column(String(50), nullable=False, unique=True, default="default")
+    legal_name = Column(String(180), nullable=False, default="Mi Empresa")
+    trade_name = Column(String(180), nullable=True)
+    ruc = Column(String(20), nullable=True)
+    address = Column(String(255), nullable=True)
+    phone = Column(String(40), nullable=True)
+    email = Column(String(120), nullable=True)
+    website = Column(String(160), nullable=True)
+    logo_url = Column(String(500), nullable=True)
+    primary_currency = Column(String(10), nullable=False, default="PEN")
+    secondary_currency = Column(String(10), nullable=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class SystemSettings(Base):
+    __tablename__ = "system_settings"
+
+    id = Column(Integer, autoincrement=True, primary_key=True, index=True)
+    singleton_key = Column(String(50), nullable=False, unique=True, default="default")
+    fiscal = Column(JSON, nullable=False)
+    series = Column(JSON, nullable=False)
+    inventory = Column(JSON, nullable=False)
+    sales = Column(JSON, nullable=False)
+    purchases = Column(JSON, nullable=False)
+    cash = Column(JSON, nullable=False)
+    dashboard = Column(JSON, nullable=False)
+    reports = Column(JSON, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

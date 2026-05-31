@@ -12,6 +12,7 @@ import {
     Package,
     ShoppingBag,
     ShoppingCart,
+    Settings,
     Truck,
     UserCog,
     Users,
@@ -49,6 +50,7 @@ const NAV_SECTIONS = [
             { to: ROUTES.orders, label: 'Ordenes', icon: ClipboardList, roles: ROUTE_PERMISSIONS[ROUTES.orders] },
             { to: ROUTES.reports, label: 'Reportes', icon: BarChart3, roles: ROUTE_PERMISSIONS[ROUTES.reports] },
             { to: ROUTES.users, label: 'Usuarios', icon: UserCog, roles: ROUTE_PERMISSIONS[ROUTES.users] },
+            { to: ROUTES.settings, label: 'Configuracion', icon: Settings, roles: ROUTE_PERMISSIONS[ROUTES.settings] },
         ],
     },
 ];
@@ -64,6 +66,7 @@ const pathLabels = {
     [ROUTES.kardex]: 'Kardex',
     [ROUTES.reports]: 'Reportes',
     [ROUTES.users]: 'Usuarios',
+    [ROUTES.settings]: 'Configuracion',
     [ROUTES.orders]: 'Ordenes',
     [ROUTES.features]: 'Features',
 };

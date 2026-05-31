@@ -10,6 +10,11 @@ export const SalesCartPanel = ({
     paymentMethods,
     selectedPaymentMethod,
     onPaymentMethodChange,
+    discountPercent = 0,
+    onDiscountPercentChange,
+    maxDiscountPercent = 0,
+    allowManualDiscount = true,
+    currency = 'PEN',
     selectedClient,
     onQuantityChange,
     onRemove,
@@ -37,7 +42,7 @@ export const SalesCartPanel = ({
                     <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
                             <p className="truncate text-sm font-black text-slate-900">{item.name_product}</p>
-                            <p className="text-xs font-semibold text-slate-400">{formatCurrency(item.price)} x unidad</p>
+                            <p className="text-xs font-semibold text-slate-400">{formatCurrency(item.price, currency)} x unidad</p>
                         </div>
                         <button type="button" className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600" onClick={() => onRemove(item.product_id)}>
                             <Trash2 size={15} />
@@ -60,7 +65,7 @@ export const SalesCartPanel = ({
                                 <Plus size={14} />
                             </Button>
                         </div>
-                        <p className="font-black text-slate-900">{formatCurrency(Number(item.price) * Number(item.quantity))}</p>
+                        <p className="font-black text-slate-900">{formatCurrency(Number(item.price) * Number(item.quantity), currency)}</p>
                     </div>
                 </div>
             ))}
@@ -78,9 +83,23 @@ export const SalesCartPanel = ({
                 ))}
             </select>
 
+            {allowManualDiscount && (
+                <div className="mt-4">
+                    <label className="text-[11px] font-black uppercase tracking-widest text-slate-400">Descuento %</label>
+                    <input
+                        type="number"
+                        min="0"
+                        max={maxDiscountPercent}
+                        value={discountPercent}
+                        onChange={(event) => onDiscountPercentChange?.(Math.min(Number(event.target.value || 0), maxDiscountPercent))}
+                        className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-blue-600"
+                    />
+                </div>
+            )}
+
             <div className="mt-5 flex items-center justify-between">
                 <span className="text-sm font-bold text-slate-400">Total</span>
-                <span className="text-2xl font-black text-blue-700">{formatCurrency(total)}</span>
+                <span className="text-2xl font-black text-blue-700">{formatCurrency(total, currency)}</span>
             </div>
 
             <Button className="mt-5 w-full" disabled={items.length === 0 || isSaving || !selectedPaymentMethod} onClick={onConfirmSale}>

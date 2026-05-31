@@ -16,6 +16,7 @@ from schemas.dashboard_schema import (
     PaymentMethodStat,
 )
 from crud import dashboard_crud
+from crud.settings_crud import get_dashboard_settings, get_inventory_settings
 from crud.inventory_crud import get_low_stock_products
 from schemas.inventory_schema import LowStockProductResponse
 
@@ -42,7 +43,7 @@ def dashboard_summary(
 # ─── Top productos más vendidos ───────────────────────────────────────────────
 @router.get("/top-products", response_model=List[TopProduct])
 def top_products(
-    limit: int = Query(10, ge=1, le=50),
+    limit: int | None = Query(None, ge=1, le=50),
     payment_method_id: int | None = None,
     user_id: int | None = None,
     db: Session = Depends(get_db),
@@ -50,13 +51,14 @@ def top_products(
 ):
     is_admin = (get_user_role_name(current_user) or "").lower() == "admin"
     effective_user_id = user_id if is_admin else current_user.id
+    limit = limit or int(get_dashboard_settings(db).get("records_limit", 10) or 10)
     return dashboard_crud.get_top_products(db=db, limit=limit, payment_method_id=payment_method_id, user_id=effective_user_id)
 
 
 # ─── Top clientes por gasto ───────────────────────────────────────────────────
 @router.get("/top-clients", response_model=List[TopClient])
 def top_clients(
-    limit: int = Query(8, ge=1, le=20),
+    limit: int | None = Query(None, ge=1, le=20),
     payment_method_id: int | None = None,
     user_id: int | None = None,
     db: Session = Depends(get_db),
@@ -64,6 +66,7 @@ def top_clients(
 ):
     is_admin = (get_user_role_name(current_user) or "").lower() == "admin"
     effective_user_id = user_id if is_admin else current_user.id
+    limit = limit or int(get_dashboard_settings(db).get("records_limit", 10) or 10)
     return dashboard_crud.get_top_clients(db=db, limit=limit, payment_method_id=payment_method_id, user_id=effective_user_id)
 
 
@@ -82,7 +85,7 @@ def client_segmentation(
 # ─── Ventas recientes ─────────────────────────────────────────────────────────
 @router.get("/recent-sales", response_model=List[RecentSale])
 def recent_sales(
-    limit: int = Query(10, ge=1, le=50),
+    limit: int | None = Query(None, ge=1, le=50),
     payment_method_id: int | None = None,
     user_id: int | None = None,
     db: Session = Depends(get_db),
@@ -90,16 +93,18 @@ def recent_sales(
 ):
     is_admin = (get_user_role_name(current_user) or "").lower() == "admin"
     effective_user_id = user_id if is_admin else current_user.id
+    limit = limit or int(get_dashboard_settings(db).get("records_limit", 10) or 10)
     return dashboard_crud.get_recent_sales(db=db, limit=limit, payment_method_id=payment_method_id, user_id=effective_user_id)
 
 
 # ─── Compras recientes ────────────────────────────────────────────────────────
 @router.get("/recent-purchases", response_model=List[RecentPurchase])
 def recent_purchases(
-    limit: int = Query(10, ge=1, le=50),
+    limit: int | None = Query(None, ge=1, le=50),
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
+    limit = limit or int(get_dashboard_settings(db).get("records_limit", 10) or 10)
     return dashboard_crud.get_recent_purchases(db=db, limit=limit)
 
 
@@ -133,8 +138,9 @@ def payment_method_stats(
 # ─── Productos bajo stock ─────────────────────────────────────────────────────
 @router.get("/low-stock", response_model=List[LowStockProductResponse])
 def dashboard_low_stock(
-    threshold: int = Query(5, ge=0),
+    threshold: int | None = Query(None, ge=0),
     db: Session = Depends(get_db),
     _: User = Depends(get_current_user),
 ):
+    threshold = threshold if threshold is not None else int(get_inventory_settings(db).get("global_min_stock", 5) or 5)
     return get_low_stock_products(db=db, threshold=threshold)

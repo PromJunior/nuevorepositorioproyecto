@@ -26,6 +26,7 @@ const ClientsPage = lazy(() => import('../modules/clients/pages/ClientsPage'));
 const ClientDetailPage = lazy(() => import('../modules/clients/pages/ClientDetailPage'));
 const ReportsPage = lazy(() => import('../modules/reports/pages/ReportsPage'));
 const UsersPage = lazy(() => import('../modules/users/pages/UsersPage'));
+const SettingsPage = lazy(() => import('../modules/settings/pages/SettingsPage'));
 const SaaSGridModule = lazy(() => import('../components/SaaSGrid').then((module) => ({ default: module.SaaSGrid })));
 
 const LazyPage = ({ children }) => (
@@ -99,6 +100,10 @@ export const AppRoutes = () => {
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.users]} />}>
                             <Route path="usuarios" element={<LazyPage><UsersPage /></LazyPage>} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.settings]} />}>
+                            <Route path="configuracion" element={<LazyPage><SettingsPage /></LazyPage>} />
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.orders]} />}>

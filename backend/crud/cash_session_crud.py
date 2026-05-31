@@ -4,6 +4,7 @@ from sqlalchemy import func
 
 from models.model import CashSession, Order, Payment, PaymentMethod, User
 from schemas.cash_session_schema import CashSessionOpen, CashSessionClose, CashSessionResponse
+from crud.settings_crud import get_cash_settings
 
 # obtener sesion abierta del usuario
 def get_open_session_by_user(db: Session, user_id: int):
@@ -26,11 +27,21 @@ def get_open_session_for_update(db: Session, user_id: int):
 #abrir sesion de caja
 
 def open_cash_session(db:Session, user_id:int, opnening_amount: float):
+    settings = get_cash_settings(db)
+    minimum = float(settings.get("minimum_opening_amount", 0) or 0)
+    if float(opnening_amount) < minimum:
+        raise ValueError(f"El monto de apertura minimo es {minimum:.2f}.")
+
     #verificar si ya existe la sesion abierta para el usuario
     existing_session = get_open_session_by_user(db=db,user_id=user_id)
     if existing_session:
         raise ValueError("Ya existe una sesión de caja abierta para este usuario.")
     
+    if not settings.get("allow_multiple_open_cash_sessions", False):
+        any_open = db.query(CashSession).filter(CashSession.status == "OPEN").first()
+        if any_open:
+            raise ValueError("Ya existe una caja abierta en el sistema.")
+
     #crear una nueva session
 
     new_session= CashSession(

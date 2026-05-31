@@ -57,6 +57,10 @@ export const PERMISSIONS = {
 
     // Dashboard
     DASHBOARD_VIEW: 'DASHBOARD_VIEW',
+
+    // Configuracion
+    SETTINGS_VIEW: 'SETTINGS_VIEW',
+    SETTINGS_UPDATE: 'SETTINGS_UPDATE',
 };
 
 // ─── Mapa rol → permisos ──────────────────────────────────────────────────────
@@ -76,6 +80,12 @@ export const ROLE_PERMISSIONS = {
         PERMISSIONS.CASH_CLOSE,
         PERMISSIONS.CASH_VIEW,
         PERMISSIONS.KARDEX_VIEW,
+    ],
+
+    supervisor: [
+        PERMISSIONS.DASHBOARD_VIEW,
+        PERMISSIONS.REPORTS_VIEW,
+        PERMISSIONS.SETTINGS_VIEW,
     ],
 };
 

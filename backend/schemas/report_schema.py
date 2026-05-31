@@ -20,10 +20,15 @@ class ReportFilters(BaseModel):
 # ─── Fila de reporte de ventas ────────────────────────────────────────────────
 class SalesReportRow(BaseModel):
     id: int
+    document_number: Optional[str] = None
     order_date: datetime
     client_name: str
     seller_name: str
     items_count: int
+    subtotal_amount: Decimal = Decimal("0")
+    tax_amount: Decimal = Decimal("0")
+    igv_percent: Decimal = Decimal("0")
+    discount_amount: Decimal = Decimal("0")
     total_amount: Decimal
     payment_method: Optional[str] = None
 
@@ -33,11 +38,15 @@ class SalesReportRow(BaseModel):
 # ─── Fila de reporte de compras ───────────────────────────────────────────────
 class PurchasesReportRow(BaseModel):
     id: int
+    document_number: Optional[str] = None
     purchase_date: datetime
     supplier_name: str
     user_name: str
     invoice_number: Optional[str] = None
     items_count: int
+    subtotal_amount: Decimal = Decimal("0")
+    tax_amount: Decimal = Decimal("0")
+    igv_percent: Decimal = Decimal("0")
     total_amount: Decimal
     status_name: Optional[str] = None
 

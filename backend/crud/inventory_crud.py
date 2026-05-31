@@ -10,6 +10,7 @@ from models.model import (
     Payment,
     Product,
 )
+from crud.settings_crud import get_inventory_settings
 
 
 # ─── Helper: ORM → dict serializable ─────────────────────────────────────────
@@ -197,6 +198,8 @@ def get_product_kardex_counts(db: Session, product_id: int) -> dict:
 
 # ─── Resumen Global del Inventario ───────────────────────────────────────────
 def get_inventory_summary(db: Session) -> dict:
+    inventory_settings = get_inventory_settings(db)
+    threshold = int(inventory_settings.get("global_min_stock", 5) or 5)
     total_products = db.query(func.count(Product.id)).scalar() or 0
     total_transactions = (
         db.query(func.count(InventoryTransaction.id)).scalar() or 0
@@ -222,7 +225,7 @@ def get_inventory_summary(db: Session) -> dict:
     # Bajo stock (≤ 5 unidades)
     low_stock_count = (
         db.query(func.count(Product.id))
-        .filter(Product.stock <= 5, Product.is_active == True)  # noqa: E712
+        .filter(Product.stock <= threshold, Product.is_active == True)  # noqa: E712
         .scalar()
         or 0
     )
@@ -250,11 +253,13 @@ def get_inventory_summary(db: Session) -> dict:
         "entries_count": entries_count,
         "exits_count": exits_count,
         "low_stock_count": low_stock_count,
+        "low_stock_threshold": threshold,
     }
 
 
 # ─── Productos bajo stock ─────────────────────────────────────────────────────
 def get_low_stock_products(db: Session, threshold: int = 5) -> list:
+    threshold = int(threshold if threshold is not None else get_inventory_settings(db).get("global_min_stock", 5))
     items = (
         db.query(Product)
         .options(joinedload(Product.category))

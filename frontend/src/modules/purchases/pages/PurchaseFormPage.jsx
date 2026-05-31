@@ -16,6 +16,7 @@ import { useCreatePurchase, useReceivePurchase } from '../hooks/usePurchases';
 import { useInventory } from '../../inventory/hooks/useInventory';
 import { formatCurrency } from '../../../shared/utils/formatters';
 import { useGenericSupplier } from '../../suppliers/hooks/useSuppliers';
+import { useRuntimeSettings } from '../../settings/hooks/useSettings';
 
 const MySwal = withReactContent(Swal);
 
@@ -28,6 +29,7 @@ const PurchaseFormPage = () => {
     const createMutation = useCreatePurchase();
     const receiveMutation = useReceivePurchase();
     const genericSupplierMutation = useGenericSupplier();
+    const runtimeQuery = useRuntimeSettings();
     const { products } = useInventory();
 
     const existingIds = useMemo(() => new Set(items.map((i) => i.product_id)), [items]);
@@ -62,7 +64,8 @@ const PurchaseFormPage = () => {
     };
 
     const validate = () => {
-        if (!supplier?.id) return 'Selecciona un proveedor.';
+        const purchaseSettings = runtimeQuery.data?.purchases || {};
+        if (!supplier?.id && !purchaseSettings.allow_purchases_without_supplier && !purchaseSettings.default_generic_supplier_id) return 'Selecciona un proveedor.';
         if (items.length === 0) return 'Agrega al menos un producto.';
         if (items.some((it) => it.quantity <= 0)) return 'Todas las cantidades deben ser > 0.';
         if (items.some((it) => it.unit_cost <= 0)) return 'Todos los costos deben ser > 0.';
@@ -70,7 +73,7 @@ const PurchaseFormPage = () => {
     };
 
     const buildPayload = () => ({
-        supplier_id: supplier.id,
+        supplier_id: supplier?.id || undefined,
         invoice_number: invoiceNumber || undefined,
         items: items.map((it) => ({
             product_id: it.product_id,

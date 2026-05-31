@@ -21,6 +21,7 @@ import { SessionHistoryTable } from '../components/SessionHistoryTable';
 import { SessionStatusBadge } from '../components/SessionStatusBadge';
 import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
 import { UserFilter } from '../../../shared/components/UserFilter';
+import { useRuntimeSettings } from '../../settings/hooks/useSettings';
 
 const MySwal = withReactContent(Swal);
 
@@ -31,6 +32,7 @@ const CashSessionPage = () => {
 
     // ─── Queries ────────────────────────────────────────────────────────────
     const activeSessionQuery = useActiveSession();
+    const runtimeQuery = useRuntimeSettings();
     const activeSession = activeSessionQuery.data;
     const hasSession = Boolean(activeSession);
 
@@ -210,7 +212,13 @@ const CashSessionPage = () => {
 
             {/* ─── Formulario apertura / cierre ────────────────────────── */}
             {!hasSession ? (
-                <OpenSessionForm onOpen={handleOpen} isLoading={openMutation.isPending} />
+                <OpenSessionForm
+                    key={runtimeQuery.data?.cash?.suggested_opening_amount || 'no-suggestion'}
+                    onOpen={handleOpen}
+                    isLoading={openMutation.isPending}
+                    minimumAmount={Number(runtimeQuery.data?.cash?.minimum_opening_amount || 0)}
+                    suggestedAmount={Number(runtimeQuery.data?.cash?.suggested_opening_amount || 0)}
+                />
             ) : (
                 <CloseSessionForm
                     expectedAmount={

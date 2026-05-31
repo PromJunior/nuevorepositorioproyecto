@@ -9,6 +9,7 @@ from routers.purchases_router import router as purchases_router
 from routers.suppliers_router import router as suppliers_router
 from routers.dashboard_router import router as dashboard_router
 from routers.report_router import router as report_router
+from routers.settings_router import router as settings_router
 
 router = APIRouter()
 
@@ -22,4 +23,5 @@ router.include_router(purchases_router)
 router.include_router(suppliers_router)
 router.include_router(dashboard_router)
 router.include_router(report_router)
+router.include_router(settings_router)
 

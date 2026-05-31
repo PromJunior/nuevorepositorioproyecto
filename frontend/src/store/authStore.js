@@ -49,6 +49,7 @@ const getPermissionsForRole = (role) => {
 
 const getDefaultRouteForRole = (role) => {
     if (role === APP_ROLES.seller) return ROUTES.sales;
+    if (role === APP_ROLES.supervisor) return ROUTES.settings;
     return ROUTES.app;
 };
 

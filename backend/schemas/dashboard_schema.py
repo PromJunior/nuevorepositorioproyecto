@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict
 from datetime import datetime
 from typing import Optional, List
 from decimal import Decimal
+from schemas.settings_schema import CompanySettingsResponse
 
 
 # ─── KPIs principales ─────────────────────────────────────────────────────────
@@ -30,6 +31,10 @@ class DashboardSummary(BaseModel):
     # Caja
     has_open_session: bool
     open_session_expected: Optional[Decimal] = None
+    company: Optional[CompanySettingsResponse] = None
+    dashboard_settings: dict = {}
+    fiscal_settings: dict = {}
+    low_stock_threshold: int = 5
 
 
 # ─── Top producto más vendido ─────────────────────────────────────────────────
