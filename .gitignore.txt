@@ -5,8 +5,10 @@ backend/__pycache__/
 backend/.env
 
 # Python
-*.pyc
 __pycache__/
+*.pyc
+*.pyo
+
 
 # Frontend (React)
 frontend/node_modules/
