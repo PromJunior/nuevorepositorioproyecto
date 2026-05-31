@@ -1,26 +1,26 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
 import { Link, Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
-import { LayoutDashboard, Package, ShoppingCart, LogOut, ClipboardList, Wallet, Sparkles, Shield } from 'lucide-react'; 
+import { LayoutDashboard, Package, ShoppingCart, LogOut, ClipboardList, Wallet, Sparkles } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 const MainLayout = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const [userRole, setUserRole] = useState(null);
-
-    useEffect(() => {
+    const userRole = useMemo(() => {
         const token = localStorage.getItem('token');
         if (token) {
             try {
                 const decoded = jwtDecode(token);
-                setUserRole(decoded.role); 
+                return decoded.role;
             } catch (error) {
                 console.error("Error decodificando token:", error);
             }
         }
+        return null;
     }, []);
 
+    // Legacy layout retained for backwards compatibility. The active app uses DashboardLayout.
     const handleLogout = () => {
         Swal.fire({
             title: '¿Cerrar sesión?',

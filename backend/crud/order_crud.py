@@ -7,6 +7,7 @@ from sqlalchemy.orm import joinedload
 from models.model import Order, OrderItem, Payment, Product
 from schemas.order_schema import OrderCreate, OrderUpdate
 from services.inventory_service import KardexService
+from crud.settings_crud import get_fiscal_settings, next_document_number
 from core.exceptions import NoOpenCashSessionError
 from datetime import datetime
 import pytz
@@ -30,11 +31,19 @@ def create_order_db_record(
         )
 
     try:
-        total_venta = Decimal("0")
+        subtotal_venta = Decimal("0")
         fecha_actual = datetime.now(PERU_TZ)
+        fiscal = get_fiscal_settings(db)
+        igv_percent = Decimal(str(fiscal.get("igv_percent", 18)))
+        document_number = next_document_number(db, "sales_receipt")
 
         new_order = Order(
+            document_number=document_number,
             total_amount=0,
+            subtotal_amount=0,
+            tax_amount=0,
+            igv_percent=igv_percent,
+            discount_amount=0,
             order_date=fecha_actual,
             user_id=user_id,
             client_id=order_create.client_id,
@@ -68,7 +77,7 @@ def create_order_db_record(
             )
 
             subamount = Decimal(str(item.quantity)) * Decimal(str(item.price))
-            total_venta += subamount
+            subtotal_venta += subamount
 
             new_item = OrderItem(
                 order_id=new_order.id,
@@ -79,6 +88,15 @@ def create_order_db_record(
             )
             db.add(new_item)
 
+        discount_percent = Decimal(str(getattr(order_create, "discount_percent", 0) or 0))
+        discount_amount = (subtotal_venta * discount_percent / Decimal("100")).quantize(Decimal("0.01"))
+        taxable_amount = subtotal_venta - discount_amount
+        tax_amount = (taxable_amount * igv_percent / Decimal("100")).quantize(Decimal("0.01"))
+        total_venta = taxable_amount + tax_amount
+
+        new_order.subtotal_amount = subtotal_venta
+        new_order.discount_amount = discount_amount
+        new_order.tax_amount = tax_amount
         new_order.total_amount = total_venta
 
         new_payment = Payment(
@@ -96,11 +114,25 @@ def create_order_db_record(
         raise e
 
 
-def get_order(db: Session, skip: int = 0, limit: int = 100, user_id: int = None):
-    query = db.query(Order).options(joinedload(Order.client))
+def get_order(
+    db: Session,
+    skip: int = 0,
+    limit: int = 100,
+    user_id: int = None,
+    payment_method_id: int = None,
+):
+    query = db.query(Order).options(
+        joinedload(Order.client),
+        joinedload(Order.order_items_order).joinedload(OrderItem.product),
+        joinedload(Order.payment_order).joinedload(Payment.payment_method),
+    )
     if user_id is not None:
         query = query.filter(Order.user_id == user_id)
-    return query.order_by(Order.id).offset(skip).limit(limit).all()
+    if payment_method_id is not None:
+        query = query.join(Payment, Payment.order_id == Order.id).filter(
+            Payment.id_payment_method == payment_method_id
+        )
+    return query.order_by(Order.id.desc()).offset(skip).limit(limit).all()
 
 
 def update_order_db_record(db: Session, order_id: int, order_data: OrderUpdate, user_id: int):

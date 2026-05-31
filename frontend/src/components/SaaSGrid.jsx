@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, ArrowRight, Shield, Zap, Code } from 'lucide-react';
 
+const MotionDiv = motion.div;
+
 // 1. Variantes para el contenedor principal (Efecto Cascada / Stagger)
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -42,7 +44,7 @@ export const SaaSGrid = () => {
       <div className="max-w-5xl w-full space-y-10">
         
         {/* Encabezado animado directamente en línea */}
-        <motion.div 
+        <MotionDiv 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, ease: "easeOut" }}
@@ -54,17 +56,17 @@ export const SaaSGrid = () => {
           <h2 className="text-3xl font-black text-slate-900 tracking-tight sm:text-4xl">
             Herramientas creadas para desarrolladores
           </h2>
-        </motion.div>
+        </MotionDiv>
 
         {/* CONTENEDOR DE LA GRILLA (Aplica las variantes de cascada) */}
-        <motion.div 
+        <MotionDiv 
           variants={containerVariants}
           initial="hidden"
           animate="visible"
           className="grid grid-cols-1 md:grid-cols-3 gap-6"
         >
           {features.map((item, index) => (
-            <motion.div
+            <MotionDiv
               key={index}
               variants={cardVariants}
               
@@ -99,18 +101,18 @@ export const SaaSGrid = () => {
                 <span>Saber más</span>
                 
                 {/* Animamos el icono interno basándonos en el hover de la tarjeta */}
-                <motion.div
+                <MotionDiv
                   variants={{
                     hover: { x: 4 }
                   }}
                   className="transform group-hover:translate-x-1 transition-transform duration-200"
                 >
                   <ArrowRight size={14} />
-                </motion.div>
+                </MotionDiv>
               </div>
-            </motion.div>
+            </MotionDiv>
           ))}
-        </motion.div>
+        </MotionDiv>
       </div>
     </div>
   );

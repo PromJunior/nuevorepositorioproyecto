@@ -5,7 +5,7 @@ from models.model import Category, Product
 from schemas.category_schema import CategoryData, CategoryResponse
 
 def get_category(db:Session):
-    return db.query(Product).options(joinedload(Product.category)).all()
+    return db.query(Category).order_by(Category.id.asc()).all()
 
 def create_category(db: Session, category: CategoryData):
     db_category = Category(name_category=category.name_category)

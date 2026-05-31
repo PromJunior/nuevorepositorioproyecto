@@ -14,6 +14,12 @@ class SupplierCreate(SupplierBase):
     pass
 
 
+class SupplierUpdate(BaseModel):
+    company_name: Optional[str] = Field(default=None, min_length=1, max_length=150)
+    phone: Optional[str] = Field(default=None, max_length=20)
+    email: Optional[EmailStr] = None
+
+
 class SupplierResponse(SupplierBase):
     id: int
     created_at: Optional[datetime] = None

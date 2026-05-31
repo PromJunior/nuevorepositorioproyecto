@@ -12,11 +12,24 @@ from core.exceptions import (
 )
 from crud import order_crud
 from crud.cash_session_crud import get_open_session_for_update
+from crud.settings_crud import get_sales_settings
 
 
 class SalesService:
     @staticmethod
     def create_order(db: Session, order_create: OrderCreate, user_id: int):
+        settings = get_sales_settings(db)
+        if order_create.client_id is None and settings.get("default_counter_client_id"):
+            order_create.client_id = settings.get("default_counter_client_id")
+        if order_create.payment_method_id is None and settings.get("default_payment_method_id"):
+            order_create.payment_method_id = settings.get("default_payment_method_id")
+
+        if order_create.discount_percent and not settings.get("allow_manual_discount", True):
+            raise InvalidPriceError("El descuento manual no esta permitido.")
+        max_discount = float(settings.get("max_discount_percent", 0) or 0)
+        if float(order_create.discount_percent or 0) > max_discount:
+            raise InvalidPriceError(f"El descuento supera el maximo permitido ({max_discount}%).")
+
         cash_session = get_open_session_for_update(db=db, user_id=user_id)
         if not cash_session:
             raise NoOpenCashSessionError(
@@ -34,7 +47,7 @@ class SalesService:
             .filter(PaymentMethod.id == order_create.payment_method_id)
             .first()
         )
-        if not metodo_de_pago:
+        if not metodo_de_pago or not metodo_de_pago.is_active:
             raise PaymentMethodNotFoundError(
                 f"Método de pago con id {order_create.payment_method_id} no encontrado"
             )
