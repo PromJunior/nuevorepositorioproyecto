@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Boolean, JSON, text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database.database import Base
@@ -44,11 +44,11 @@ class Order(Base):
     id = Column(Integer, autoincrement=True, primary_key=True, index=True)
     order_date = Column(DateTime, default=datetime.utcnow)
     document_number = Column(String(50), nullable=True, index=True)
-    subtotal_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
-    tax_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
-    igv_percent = Column(Numeric(5, 2), nullable=False, default=18.00)
-    discount_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
-    total_amount = Column(Numeric(10, 2))
+    subtotal_amount = Column(Numeric(10, 2), nullable=False, default=0, server_default=text("0"))
+    tax_amount = Column(Numeric(10, 2), nullable=False, default=0, server_default=text("0"))
+    igv_percent = Column(Numeric(5, 2), nullable=False, default=18, server_default=text("18"))
+    discount_amount = Column(Numeric(10, 2), nullable=False, default=0, server_default=text("0"))
+    total_amount = Column(Numeric(10, 2), nullable=False, default=0, server_default=text("0"))
 
     # estado activo o inactivo para permitir anulaciones sin eliminar registros, útil para auditorías o seguimiento histórico de ventas
     is_active = Column(Boolean, default=True)
@@ -194,10 +194,10 @@ class Purchase(Base):
     purchase_date = Column(DateTime, default=datetime.utcnow)
     document_number = Column(String(50), nullable=True, index=True)
     invoice_number = Column(String(50), nullable=True) # Nro de Comprobante para auditorías o seguimiento contable como facturas, boletas, etc.
-    subtotal_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
-    tax_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
-    igv_percent = Column(Numeric(5, 2), nullable=False, default=18.00)
-    total_amount = Column(Numeric(10, 2), nullable=False, default=0.00)
+    subtotal_amount = Column(Numeric(10, 2), nullable=False, default=0, server_default=text("0"))
+    tax_amount = Column(Numeric(10, 2), nullable=False, default=0, server_default=text("0"))
+    igv_percent = Column(Numeric(5, 2), nullable=False, default=18, server_default=text("18"))
+    total_amount = Column(Numeric(10, 2), nullable=False, default=0, server_default=text("0"))
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Llaves foráneas a proveedor y usuario

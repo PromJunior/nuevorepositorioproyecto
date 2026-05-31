@@ -32,6 +32,7 @@ def ensure_payment_method_columns(db: Session):
 
 def ensure_settings_integration_columns(db: Session):
     inspector = inspect(db.bind)
+    dialect_name = db.bind.dialect.name
 
     tables = inspector.get_table_names()
 
@@ -46,9 +47,9 @@ def ensure_settings_integration_columns(db: Session):
 
     column_sql = {
         "document_number": "VARCHAR(50)",
-        "subtotal_amount": "NUMERIC(10,2) DEFAULT 0",
-        "tax_amount": "NUMERIC(10,2) DEFAULT 0",
-        "igv_percent": "NUMERIC(5,2) DEFAULT 18",
+        "subtotal_amount": "NUMERIC(10,2) NOT NULL DEFAULT 0" if dialect_name == "mssql" else "NUMERIC(10,2) DEFAULT 0",
+        "tax_amount": "NUMERIC(10,2) NOT NULL DEFAULT 0" if dialect_name == "mssql" else "NUMERIC(10,2) DEFAULT 0",
+        "igv_percent": "NUMERIC(5,2) NOT NULL DEFAULT 18" if dialect_name == "mssql" else "NUMERIC(5,2) DEFAULT 18",
     }
 
     for table, columns in table_columns.items():
@@ -64,12 +65,76 @@ def ensure_settings_integration_columns(db: Session):
                 )
 
         if table == "orders" and "discount_amount" not in columns:
-            db.execute(
-                text("""
-                    ALTER TABLE orders
-                    ADD discount_amount NUMERIC(10,2) DEFAULT 0
-                """)
+            column_type = (
+                "NUMERIC(10,2) NOT NULL DEFAULT 0"
+                if dialect_name == "mssql"
+                else "NUMERIC(10,2) DEFAULT 0"
             )
+            db.execute(
+                text(f"ALTER TABLE orders ADD discount_amount {column_type}")
+            )
+
+    db.commit()
+    ensure_financial_columns_not_null(db)
+
+
+def ensure_financial_columns_not_null(db: Session):
+    if db.bind.dialect.name != "mssql":
+        return
+
+    financial_columns = {
+        "orders": {
+            "subtotal_amount": ("NUMERIC(10,2)", "0"),
+            "tax_amount": ("NUMERIC(10,2)", "0"),
+            "igv_percent": ("NUMERIC(5,2)", "18"),
+            "discount_amount": ("NUMERIC(10,2)", "0"),
+            "total_amount": ("NUMERIC(10,2)", "0"),
+        },
+        "purchases": {
+            "subtotal_amount": ("NUMERIC(10,2)", "0"),
+            "tax_amount": ("NUMERIC(10,2)", "0"),
+            "igv_percent": ("NUMERIC(5,2)", "18"),
+            "total_amount": ("NUMERIC(10,2)", "0"),
+        },
+    }
+
+    inspector = inspect(db.bind)
+    tables = set(inspector.get_table_names())
+
+    for table, columns in financial_columns.items():
+        if table not in tables:
+            continue
+
+        existing_columns = {
+            column["name"]: column
+            for column in inspector.get_columns(table)
+        }
+
+        for column_name, (column_type, default_value) in columns.items():
+            if column_name not in existing_columns:
+                db.execute(
+                    text(
+                        f"ALTER TABLE {table} "
+                        f"ADD {column_name} {column_type} NOT NULL DEFAULT {default_value}"
+                    )
+                )
+                continue
+
+            db.execute(
+                text(
+                    f"UPDATE {table} "
+                    f"SET {column_name} = {default_value} "
+                    f"WHERE {column_name} IS NULL"
+                )
+            )
+
+            if existing_columns[column_name].get("nullable", True):
+                db.execute(
+                    text(
+                        f"ALTER TABLE {table} "
+                        f"ALTER COLUMN {column_name} {column_type} NOT NULL"
+                    )
+                )
 
     db.commit()
 

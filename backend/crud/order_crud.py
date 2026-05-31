@@ -164,7 +164,7 @@ def update_order_db_record(db: Session, order_id: int, order_data: OrderUpdate, 
 
         db.query(OrderItem).filter(OrderItem.order_id == order_id).delete()
 
-        total_amount = Decimal("0")
+        subtotal_venta = Decimal("0")
         for item in order_data.items:
             product_db = (
                 db.query(Product)
@@ -190,7 +190,7 @@ def update_order_db_record(db: Session, order_id: int, order_data: OrderUpdate, 
             )
 
             sub_amount = Decimal(str(item.quantity)) * Decimal(str(item.price))
-            total_amount += sub_amount
+            subtotal_venta += sub_amount
 
             new_order_item = OrderItem(
                 order_id=order_id,
@@ -201,6 +201,18 @@ def update_order_db_record(db: Session, order_id: int, order_data: OrderUpdate, 
             )
             db.add(new_order_item)
 
+        fiscal = get_fiscal_settings(db)
+        igv_percent = Decimal(str(fiscal.get("igv_percent", db_order.igv_percent or 18)))
+        discount_percent = Decimal(str(getattr(order_data, "discount_percent", 0) or 0))
+        discount_amount = (subtotal_venta * discount_percent / Decimal("100")).quantize(Decimal("0.01"))
+        taxable_amount = subtotal_venta - discount_amount
+        tax_amount = (taxable_amount * igv_percent / Decimal("100")).quantize(Decimal("0.01"))
+        total_amount = taxable_amount + tax_amount
+
+        db_order.subtotal_amount = subtotal_venta
+        db_order.discount_amount = discount_amount
+        db_order.tax_amount = tax_amount
+        db_order.igv_percent = igv_percent
         db_order.total_amount = total_amount
         db_order.client_id = order_data.client_id
 
