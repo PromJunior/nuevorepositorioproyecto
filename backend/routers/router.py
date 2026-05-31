@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from routers.auth_router import router as auth_router
+from routers.automations_router import router as automations_router
 from routers.products_router import router as products_router
 from routers.sales_router import router as sales_router
 from routers.cash_router import router as cash_router
@@ -14,6 +15,7 @@ from routers.settings_router import router as settings_router
 router = APIRouter()
 
 router.include_router(auth_router)
+router.include_router(automations_router)
 router.include_router(products_router)
 router.include_router(sales_router)
 router.include_router(cash_router)

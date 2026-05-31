@@ -16,6 +16,25 @@ export const settingsService = {
         return response.data;
     },
 
+    getWebhookSettings: async () => {
+        const response = await apiClient.get('/settings');
+        return response.data.automations;
+    },
+
+    updateWebhookSettings: async (payload) => {
+        const settingsResponse = await apiClient.get('/settings');
+        const response = await apiClient.put('/settings', {
+            ...settingsResponse.data,
+            automations: payload,
+        });
+        return response.data;
+    },
+
+    testWebhook: async () => {
+        const response = await apiClient.post('/automations/webhook/test');
+        return response.data;
+    },
+
     getCompany: async () => {
         const response = await apiClient.get('/settings/company');
         return response.data;

@@ -5,6 +5,7 @@ export const settingsKeys = {
     all: ['settings'],
     company: ['settings', 'company'],
     runtime: ['settings', 'runtime'],
+    webhook: ['settings', 'webhook'],
 };
 
 export const useSettings = () =>
@@ -25,6 +26,12 @@ export const useRuntimeSettings = () =>
         queryFn: settingsService.getRuntimeSettings,
     });
 
+export const useWebhookSettings = () =>
+    useQuery({
+        queryKey: settingsKeys.webhook,
+        queryFn: settingsService.getWebhookSettings,
+    });
+
 export const useUpdateSettings = () => {
     const queryClient = useQueryClient();
     return useMutation({
@@ -32,6 +39,22 @@ export const useUpdateSettings = () => {
         onSuccess: () => queryClient.invalidateQueries({ queryKey: settingsKeys.all }),
     });
 };
+
+export const useUpdateWebhookSettings = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: settingsService.updateWebhookSettings,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: settingsKeys.all });
+            queryClient.invalidateQueries({ queryKey: settingsKeys.webhook });
+        },
+    });
+};
+
+export const useTestWebhook = () =>
+    useMutation({
+        mutationFn: settingsService.testWebhook,
+    });
 
 export const useUpdateCompanySettings = () => {
     const queryClient = useQueryClient();

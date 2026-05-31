@@ -47,6 +47,7 @@ def _settings_response(db: Session):
         "cash": system.cash,
         "dashboard": system.dashboard,
         "reports": system.reports,
+        "automations": system.automations or {},
         "company": company,
         "payment_methods": payment_methods,
     }
@@ -76,6 +77,7 @@ def get_runtime_settings(
         "cash": system.cash,
         "dashboard": system.dashboard,
         "reports": system.reports,
+        "automations": system.automations or {},
     }
 
 

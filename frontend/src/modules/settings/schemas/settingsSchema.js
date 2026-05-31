@@ -18,3 +18,9 @@ export const paymentMethodSettingsSchema = z.object({
     is_active: z.boolean(),
     display_order: z.number().min(0),
 });
+
+export const webhookSettingsSchema = z.object({
+    webhook_enabled: z.boolean(),
+    webhook_url: z.string().url().optional().or(z.literal('')).nullable(),
+    webhook_secret: z.string().optional().or(z.literal('')).nullable(),
+});

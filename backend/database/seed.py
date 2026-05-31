@@ -76,6 +76,26 @@ def ensure_settings_integration_columns(db: Session):
 
     db.commit()
     ensure_financial_columns_not_null(db)
+    ensure_system_settings_automation_columns(db)
+
+
+def ensure_system_settings_automation_columns(db: Session):
+    inspector = inspect(db.bind)
+
+    if "system_settings" not in inspector.get_table_names():
+        return
+
+    columns = {
+        column["name"]
+        for column in inspector.get_columns("system_settings")
+    }
+
+    if "automations" in columns:
+        return
+
+    column_type = "NVARCHAR(MAX)" if db.bind.dialect.name == "mssql" else "JSON"
+    db.execute(text(f"ALTER TABLE system_settings ADD automations {column_type}"))
+    db.commit()
 
 
 def ensure_financial_columns_not_null(db: Session):

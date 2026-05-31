@@ -12,7 +12,9 @@ import {
     Save,
     ShoppingBag,
     ShoppingCart,
+    Send,
     Wallet,
+    Workflow,
 } from 'lucide-react';
 import { PageHeader } from '../../../shared/components/PageHeader';
 import { DataState } from '../../../shared/components/DataState';
@@ -21,7 +23,9 @@ import { Button } from '../../../shared/components/ui/button';
 import { useAuthStore } from '../../../store/authStore';
 import {
     useSettings,
+    useTestWebhook,
     useUpdateCompanySettings,
+    useUpdateWebhookSettings,
     useUpdatePaymentMethodSettings,
     useUpdateSettings,
 } from '../hooks/useSettings';
@@ -39,6 +43,7 @@ const TABS = [
     { id: 'cash', label: 'Caja', icon: Wallet },
     { id: 'dashboard', label: 'Dashboard', icon: ChartNoAxesCombined },
     { id: 'reports', label: 'Reportes', icon: FileDown },
+    { id: 'automations', label: 'n8n', icon: Workflow },
 ];
 
 const emptyCompany = {
@@ -52,6 +57,12 @@ const emptyCompany = {
     logo_url: '',
     primary_currency: 'PEN',
     secondary_currency: '',
+};
+
+const emptyAutomations = {
+    webhook_enabled: false,
+    webhook_url: '',
+    webhook_secret: '',
 };
 
 const toInputValue = (value) => value ?? '';
@@ -115,6 +126,8 @@ const SettingsPage = () => {
     const settingsQuery = useSettings();
     const updateCompany = useUpdateCompanySettings();
     const updateSettings = useUpdateSettings();
+    const updateWebhookSettings = useUpdateWebhookSettings();
+    const testWebhook = useTestWebhook();
     const updatePaymentMethod = useUpdatePaymentMethodSettings();
 
     useEffect(() => {
@@ -122,12 +135,20 @@ const SettingsPage = () => {
         const { company: companyData, payment_methods: methods, ...systemData } = settingsQuery.data;
         queueMicrotask(() => {
             setCompany(normalizeCompany(companyData));
-            setSystem(systemData);
+            setSystem({
+                ...systemData,
+                automations: {
+                    ...emptyAutomations,
+                    ...(systemData.automations || {}),
+                    webhook_url: toInputValue(systemData.automations?.webhook_url),
+                    webhook_secret: toInputValue(systemData.automations?.webhook_secret),
+                },
+            });
             setPaymentMethods([...(methods || [])].sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0)));
         });
     }, [settingsQuery.data]);
 
-    const isSaving = updateCompany.isPending || updateSettings.isPending || updatePaymentMethod.isPending;
+    const isSaving = updateCompany.isPending || updateSettings.isPending || updateWebhookSettings.isPending || updatePaymentMethod.isPending;
     const currentTab = useMemo(() => TABS.find((tab) => tab.id === activeTab), [activeTab]);
 
     const saveCompany = async () => {
@@ -145,6 +166,28 @@ const SettingsPage = () => {
             Swal.fire({ icon: 'success', title: 'Configuracion actualizada', timer: 1400, showConfirmButton: false });
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'No se pudo guardar', text: error.response?.data?.detail || error.message });
+        }
+    };
+
+    const saveWebhook = async () => {
+        try {
+            await updateWebhookSettings.mutateAsync({
+                webhook_enabled: Boolean(system.automations.webhook_enabled),
+                webhook_url: cleanNullable(system.automations.webhook_url),
+                webhook_secret: cleanNullable(system.automations.webhook_secret),
+            });
+            Swal.fire({ icon: 'success', title: 'Configuracion n8n actualizada', timer: 1400, showConfirmButton: false });
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'No se pudo guardar', text: error.response?.data?.detail || error.message });
+        }
+    };
+
+    const testWebhookConnection = async () => {
+        try {
+            await testWebhook.mutateAsync();
+            Swal.fire({ icon: 'success', title: 'Webhook enviado correctamente', text: 'n8n recibio el payload de prueba.' });
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'No se pudo probar la conexion', text: error.response?.data?.detail || error.message });
         }
     };
 
@@ -319,6 +362,46 @@ const SettingsPage = () => {
                         <Field label="Cantidad registros"><TextInput readOnly={!canEdit} type="number" value={system.dashboard.records_limit} onChange={(e) => updateSection('dashboard', 'records_limit', Number(e.target.value))} /></Field>
                     </FieldGrid>
                     <div className="mt-5"><SaveBar canEdit={canEdit} isSaving={isSaving} onSave={saveSystem} /></div>
+                </Section>
+            );
+        }
+
+        if (activeTab === 'automations') {
+            return (
+                <Section title="Configuracion n8n" description="Conexion inicial ERP a Webhook para pruebas controladas.">
+                    <FieldGrid>
+                        <Field label="Activar Webhook">
+                            <Toggle
+                                disabled={!canEdit}
+                                checked={Boolean(system.automations.webhook_enabled)}
+                                onChange={(v) => updateSection('automations', 'webhook_enabled', v)}
+                            />
+                        </Field>
+                        <Field label="URL Webhook">
+                            <TextInput
+                                readOnly={!canEdit}
+                                placeholder="http://localhost:5678/webhook-test/..."
+                                value={system.automations.webhook_url || ''}
+                                onChange={(e) => updateSection('automations', 'webhook_url', e.target.value)}
+                            />
+                        </Field>
+                        <Field label="Secret opcional">
+                            <TextInput
+                                readOnly={!canEdit}
+                                type="password"
+                                value={system.automations.webhook_secret || ''}
+                                onChange={(e) => updateSection('automations', 'webhook_secret', e.target.value)}
+                            />
+                        </Field>
+                    </FieldGrid>
+                    <div className="mt-5 flex flex-wrap justify-end gap-2">
+                        <Button onClick={saveWebhook} disabled={!canEdit || isSaving}>
+                            <Save size={15} /> Guardar
+                        </Button>
+                        <Button onClick={testWebhookConnection} disabled={!canEdit || testWebhook.isPending}>
+                            <Send size={15} /> Probar Conexion
+                        </Button>
+                    </div>
                 </Section>
             );
         }

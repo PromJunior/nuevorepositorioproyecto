@@ -371,6 +371,18 @@ class AuditLog(Base):
     user = relationship("User", foreign_keys=[user_id])
 
 
+class WebhookLog(Base):
+    __tablename__ = "webhook_logs"
+
+    id = Column(Integer, autoincrement=True, primary_key=True, index=True)
+    event = Column(String(100), nullable=False, index=True)
+    destination_url = Column(String(500), nullable=True)
+    status_code = Column(Integer, nullable=True)
+    success = Column(Boolean, default=False)
+    message = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 #-----------------------> CONFIGURACION GLOBAL DEL ERP <------------------------
 class CompanySettings(Base):
     __tablename__ = "company_settings"
@@ -403,4 +415,5 @@ class SystemSettings(Base):
     cash = Column(JSON, nullable=False)
     dashboard = Column(JSON, nullable=False)
     reports = Column(JSON, nullable=False)
+    automations = Column(JSON, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -33,6 +33,7 @@ def _system_dict(db: Session) -> dict:
         "cash": settings.cash or {},
         "dashboard": settings.dashboard or {},
         "reports": settings.reports or {},
+        "automations": settings.automations or {},
     }
 
 
@@ -62,6 +63,10 @@ def get_dashboard_settings(db: Session) -> dict:
 
 def get_reports_settings(db: Session) -> dict:
     return _system_dict(db)["reports"]
+
+
+def get_automations_settings(db: Session) -> dict:
+    return _system_dict(db)["automations"]
 
 
 def format_document_number(serie: str, correlativo: int) -> str:

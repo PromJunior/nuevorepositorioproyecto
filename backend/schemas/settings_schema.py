@@ -1,7 +1,8 @@
 from decimal import Decimal
 from typing import Optional
+from urllib.parse import urlparse
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl, model_validator
 
 
 class CompanySettingsBase(BaseModel):
@@ -108,6 +109,26 @@ class ReportsSettings(BaseModel):
     default_csv: bool = False
 
 
+class AutomationsSettings(BaseModel):
+    webhook_enabled: bool = False
+    webhook_url: Optional[str] = Field(default=None, max_length=500)
+    webhook_secret: Optional[str] = Field(default=None, max_length=255)
+
+    @model_validator(mode="after")
+    def validate_webhook_url(self):
+        if self.webhook_url == "":
+            self.webhook_url = None
+        if not self.webhook_url:
+            if self.webhook_enabled:
+                raise ValueError("URL Webhook es requerida cuando el webhook esta activo")
+            return self
+
+        parsed_url = urlparse(self.webhook_url)
+        if parsed_url.scheme not in ("http", "https") or not parsed_url.netloc:
+            raise ValueError("URL Webhook no es valida")
+        return self
+
+
 class SystemSettingsUpdate(BaseModel):
     fiscal: FiscalSettings = Field(default_factory=FiscalSettings)
     series: SeriesSettings = Field(default_factory=SeriesSettings)
@@ -117,6 +138,7 @@ class SystemSettingsUpdate(BaseModel):
     cash: CashSettings = Field(default_factory=CashSettings)
     dashboard: DashboardSettings = Field(default_factory=DashboardSettings)
     reports: ReportsSettings = Field(default_factory=ReportsSettings)
+    automations: AutomationsSettings = Field(default_factory=AutomationsSettings)
 
 
 class PaymentMethodSettingsResponse(BaseModel):
