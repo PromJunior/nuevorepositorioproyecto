@@ -379,6 +379,8 @@ class WebhookLog(Base):
     destination_url = Column(String(500), nullable=True)
     status_code = Column(Integer, nullable=True)
     success = Column(Boolean, default=False)
+    duration_ms = Column(Integer, nullable=True)
+    payload = Column(JSON, nullable=True)
     message = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 

@@ -13,14 +13,17 @@ from core.exceptions import (
 from crud import order_crud
 from crud.cash_session_crud import get_open_session_for_update
 from crud.settings_crud import get_sales_settings
+from services.event_dispatcher import emit_sale_created, emit_stock_low_if_needed
+
+COUNTER_CLIENT_ID = 4
 
 
 class SalesService:
     @staticmethod
     def create_order(db: Session, order_create: OrderCreate, user_id: int):
         settings = get_sales_settings(db)
-        if order_create.client_id is None and settings.get("default_counter_client_id"):
-            order_create.client_id = settings.get("default_counter_client_id")
+        if order_create.client_id is None:
+            order_create.client_id = settings.get("default_counter_client_id") or COUNTER_CLIENT_ID
         if order_create.payment_method_id is None and settings.get("default_payment_method_id"):
             order_create.payment_method_id = settings.get("default_payment_method_id")
 
@@ -38,6 +41,8 @@ class SalesService:
 
         client_db = db.query(Client).filter(Client.id == order_create.client_id).first()
         if not client_db:
+            if order_create.client_id == COUNTER_CLIENT_ID:
+                raise ClientNotFoundError("Cliente Mostrador no configurado")
             raise ClientNotFoundError(
                 f"Cliente con id {order_create.client_id} no encontrado"
             )
@@ -69,12 +74,18 @@ class SalesService:
                     f"Precio inválido para el producto {product_db.name_product}"
                 )
 
-        return order_crud.create_order_db_record(
+        order = order_crud.create_order_db_record(
             db=db,
             order_create=order_create,
             user_id=user_id,
             cash_session_id=cash_session.id,
         )
+        emit_sale_created(order)
+        for item in order.order_items_order:
+            product = db.query(Product).filter(Product.id == item.product_id).first()
+            if product:
+                emit_stock_low_if_needed(db, product)
+        return order
 
     @staticmethod
     def update_order(db: Session, order_id: int, order_data: OrderUpdate, user_id: int):
@@ -82,8 +93,13 @@ class SalesService:
         if not db_order:
             raise OrderNotFoundError("La orden no existe")
 
+        if order_data.client_id is None:
+            order_data.client_id = COUNTER_CLIENT_ID
+
         client_db = db.query(Client).filter(Client.id == order_data.client_id).first()
         if not client_db:
+            if order_data.client_id == COUNTER_CLIENT_ID:
+                raise ClientNotFoundError("Cliente Mostrador no configurado")
             raise ClientNotFoundError(
                 f"Cliente con id {order_data.client_id} no encontrado"
             )

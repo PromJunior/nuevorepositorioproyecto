@@ -4,9 +4,10 @@ from typing import List
 
 from database.database import get_db
 from auth.security import get_current_user, get_current_admin_user
-from models.model import User
+from models.model import Product, User
 from schemas.purchase_schema import PurchaseCreate, PurchaseResponse, PurchaseDetailResponse
 from services.purchase_service import PurchaseService
+from services.event_dispatcher import emit_purchase_received, emit_stock_low_if_needed
 from crud import purchase_crud
 
 router = APIRouter(tags=["Purchases / Compras"])
@@ -62,6 +63,11 @@ def receive_purchase(
         purchase = purchase_crud.receive_purchase(
             db=db, purchase_id=purchase_id, user_id=admin_user.id
         )
+        emit_purchase_received(purchase)
+        for item in purchase.purchase_items:
+            product = db.query(Product).filter(Product.id == item.product_id).first()
+            if product:
+                emit_stock_low_if_needed(db, product)
         return purchase_crud.get_purchase_by_id(db=db, purchase_id=purchase_id)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc))

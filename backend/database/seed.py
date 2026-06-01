@@ -77,6 +77,7 @@ def ensure_settings_integration_columns(db: Session):
     db.commit()
     ensure_financial_columns_not_null(db)
     ensure_system_settings_automation_columns(db)
+    ensure_webhook_log_columns(db)
 
 
 def ensure_system_settings_automation_columns(db: Session):
@@ -95,6 +96,27 @@ def ensure_system_settings_automation_columns(db: Session):
 
     column_type = "NVARCHAR(MAX)" if db.bind.dialect.name == "mssql" else "JSON"
     db.execute(text(f"ALTER TABLE system_settings ADD automations {column_type}"))
+    db.commit()
+
+
+def ensure_webhook_log_columns(db: Session):
+    inspector = inspect(db.bind)
+
+    if "webhook_logs" not in inspector.get_table_names():
+        return
+
+    columns = {
+        column["name"]
+        for column in inspector.get_columns("webhook_logs")
+    }
+
+    if "duration_ms" not in columns:
+        db.execute(text("ALTER TABLE webhook_logs ADD duration_ms INT"))
+
+    if "payload" not in columns:
+        column_type = "NVARCHAR(MAX)" if db.bind.dialect.name == "mssql" else "JSON"
+        db.execute(text(f"ALTER TABLE webhook_logs ADD payload {column_type}"))
+
     db.commit()
 
 

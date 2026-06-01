@@ -17,6 +17,7 @@ import {
     UserCog,
     Users,
     Wallet,
+    Workflow,
     X,
 } from 'lucide-react';
 import { Button } from '../../shared/components/ui/button';
@@ -49,6 +50,7 @@ const NAV_SECTIONS = [
         items: [
             { to: ROUTES.orders, label: 'Ordenes', icon: ClipboardList, roles: ROUTE_PERMISSIONS[ROUTES.orders] },
             { to: ROUTES.reports, label: 'Reportes', icon: BarChart3, roles: ROUTE_PERMISSIONS[ROUTES.reports] },
+            { to: ROUTES.automations, label: 'Automatizaciones', icon: Workflow, roles: ROUTE_PERMISSIONS[ROUTES.automations] },
             { to: ROUTES.users, label: 'Usuarios', icon: UserCog, roles: ROUTE_PERMISSIONS[ROUTES.users] },
             { to: ROUTES.settings, label: 'Configuracion', icon: Settings, roles: ROUTE_PERMISSIONS[ROUTES.settings] },
         ],
@@ -65,6 +67,7 @@ const pathLabels = {
     [ROUTES.cashClosing]: 'Caja',
     [ROUTES.kardex]: 'Kardex',
     [ROUTES.reports]: 'Reportes',
+    [ROUTES.automations]: 'Automatizaciones',
     [ROUTES.users]: 'Usuarios',
     [ROUTES.settings]: 'Configuracion',
     [ROUTES.orders]: 'Ordenes',

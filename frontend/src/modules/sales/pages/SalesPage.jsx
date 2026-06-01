@@ -12,7 +12,7 @@ import { formatCurrency } from '../../../shared/utils/formatters';
 import { useRuntimeSettings } from '../../settings/hooks/useSettings';
 
 const MySwal = withReactContent(Swal);
-const COUNTER_CLIENT = { id: null, full_name: 'Venta Mostrador' };
+const COUNTER_CLIENT = { id: 4, full_name: 'Venta Mostrador', dni: '00000000' };
 
 const SalesPage = () => {
     const productsQuery = useSalesProducts();
@@ -30,6 +30,7 @@ const SalesPage = () => {
 
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
     const [selectedClient, setSelectedClient] = useState(COUNTER_CLIENT);
+    const [isCounterSale, setIsCounterSale] = useState(true);
     const [discountPercent, setDiscountPercent] = useState(0);
     const [dniSearch, setDniSearch] = useState('');
 
@@ -58,6 +59,7 @@ const SalesPage = () => {
     }, [products, syncStock]);
 
     const handleDniChange = (value) => {
+        setIsCounterSale(false);
         setDniSearch(value);
         if (value.length !== 8) {
             if (selectedClient.id !== COUNTER_CLIENT.id) setSelectedClient(COUNTER_CLIENT);
@@ -74,10 +76,12 @@ const SalesPage = () => {
             const cached = dniCache.current.get(dniSearch);
             if (cached.exists) {
                 setSelectedClient(cached.client);
+                setIsCounterSale(false);
                 setSearchStatus('found_local');
             } else {
                 setExternalClientData(cached.client);
                 setSelectedClient(COUNTER_CLIENT);
+                setIsCounterSale(true);
                 setSearchStatus('not_found');
             }
             setSearchError(null);
@@ -94,14 +98,17 @@ const SalesPage = () => {
 
             if (res.exists) {
                 setSelectedClient(res.client);
+                setIsCounterSale(false);
                 setSearchStatus('found_local');
             } else {
                 setExternalClientData(res.client);
                 setSelectedClient(COUNTER_CLIENT);
+                setIsCounterSale(true);
                 setSearchStatus('not_found');
             }
         } catch (err) {
             setSelectedClient(COUNTER_CLIENT);
+            setIsCounterSale(true);
             setSearchStatus('error');
             setSearchError(err.message || 'Error al buscar cliente');
         }
@@ -122,6 +129,7 @@ const SalesPage = () => {
         try {
             const client = await createClientMutation.mutateAsync(clientData);
             setSelectedClient(client);
+            setIsCounterSale(false);
             setDniSearch(client.dni);
             setSearchStatus('found_local');
             setSearchError(null);
@@ -152,8 +160,13 @@ const SalesPage = () => {
         if (!result.isConfirmed) return;
 
         try {
+            const finalClientId = selectedClient?.id ?? COUNTER_CLIENT.id;
+            if (!finalClientId) {
+                throw new Error('Cliente invalido');
+            }
+
             await createSaleMutation.mutateAsync({
-                client_id: selectedClient.id || undefined,
+                client_id: finalClientId,
                 payment_method_id: effectivePaymentMethod,
                 discount_percent: Number(discountPercent || 0),
                 items: items.map((item) => ({
@@ -164,6 +177,7 @@ const SalesPage = () => {
             });
             clearCart();
             setSelectedClient(COUNTER_CLIENT);
+            setIsCounterSale(true);
             setDniSearch('');
             MySwal.fire({ icon: 'success', title: 'Venta registrada', text: 'Stock y caja fueron sincronizados.' });
         } catch (error) {
@@ -182,11 +196,14 @@ const SalesPage = () => {
             <ClientSelector
                 dni={dniSearch}
                 selectedClient={selectedClient}
+                isCounterSale={isCounterSale}
                 isSearching={searchClientMutation.isPending}
                 onDniChange={handleDniChange}
                 onSearchDni={handleSearchDni}
+                onSearchClient={() => setIsCounterSale(false)}
                 onUseCounterSale={() => {
                     setSelectedClient(COUNTER_CLIENT);
+                    setIsCounterSale(true);
                     setDniSearch('');
                     setSearchStatus(null);
                     setSearchError(null);

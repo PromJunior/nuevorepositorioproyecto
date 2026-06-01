@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from time import perf_counter
 from typing import Any
 
 import httpx
@@ -33,6 +34,8 @@ def _write_log(
     success: bool,
     message: str,
     status_code: int | None = None,
+    duration_ms: int | None = None,
+    payload: dict[str, Any] | None = None,
 ) -> None:
     db.add(
         WebhookLog(
@@ -40,6 +43,8 @@ def _write_log(
             destination_url=destination_url,
             status_code=status_code,
             success=success,
+            duration_ms=duration_ms,
+            payload=payload,
             message=message[:500],
         )
     )
@@ -49,6 +54,7 @@ def _write_log(
 def send_webhook_event(event_name: str, payload: dict[str, Any]) -> dict[str, Any]:
     db = SessionLocal()
     webhook_url = None
+    started_at = perf_counter()
 
     try:
         settings = get_automations_settings(db)
@@ -58,12 +64,14 @@ def send_webhook_event(event_name: str, payload: dict[str, Any]) -> dict[str, An
 
         if not webhook_enabled:
             message = "Webhook desactivado"
-            _write_log(db, event_name, None, False, message)
+            duration_ms = int((perf_counter() - started_at) * 1000)
+            _write_log(db, event_name, None, False, message, duration_ms=duration_ms, payload=payload)
             return {"success": False, "sent": False, "message": message}
 
         if not webhook_url:
             message = "URL Webhook no configurada"
-            _write_log(db, event_name, None, False, message)
+            duration_ms = int((perf_counter() - started_at) * 1000)
+            _write_log(db, event_name, None, False, message, duration_ms=duration_ms, payload=payload)
             return {"success": False, "sent": False, "message": message}
 
         headers = {"Content-Type": "application/json"}
@@ -78,18 +86,21 @@ def send_webhook_event(event_name: str, payload: dict[str, Any]) -> dict[str, An
         )
         success = 200 <= response.status_code < 300
         message = "Webhook enviado correctamente" if success else f"Webhook respondio con HTTP {response.status_code}"
-        _write_log(db, event_name, webhook_url, success, message, response.status_code)
+        duration_ms = int((perf_counter() - started_at) * 1000)
+        _write_log(db, event_name, webhook_url, success, message, response.status_code, duration_ms, payload)
         return {
             "success": success,
             "sent": True,
             "message": message,
             "status_code": response.status_code,
+            "duration_ms": duration_ms,
         }
     except Exception as exc:
         message = f"Error enviando webhook: {exc}"
         logger.exception("Webhook event failed: %s", event_name)
         try:
-            _write_log(db, event_name, webhook_url, False, message)
+            duration_ms = int((perf_counter() - started_at) * 1000)
+            _write_log(db, event_name, webhook_url, False, message, duration_ms=duration_ms, payload=payload)
         except Exception:
             logger.exception("Webhook log write failed")
         return {"success": False, "sent": False, "message": message}

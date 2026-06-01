@@ -20,6 +20,7 @@ from crud.cash_session_crud import (
     get_cash_sesions_by_user,
     get_cash_session_summary,
 )
+from services.event_dispatcher import emit_cash_closed
 
 router = APIRouter(
     prefix="/cash-session",
@@ -82,11 +83,13 @@ def close_session(
     current_user: User = Depends(get_current_user),
 ):
     try:
-        return close_cash_session(
+        session = close_cash_session(
             db=db,
             user_id=current_user.id,
             closing_amount=data.closing_amount,
         )
+        emit_cash_closed(session)
+        return session
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc))
 
