@@ -78,8 +78,8 @@ export const useCloseSession = () => {
     return useMutation({
         mutationFn: cashSessionService.closeSession,
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: cashSessionKeys.active });
-            queryClient.invalidateQueries({ queryKey: ['cash-session', 'summary'] });
+            queryClient.setQueryData(cashSessionKeys.active, null);
+            queryClient.removeQueries({ queryKey: ['cash-session', 'summary'] });
             queryClient.invalidateQueries({ queryKey: ['cash-session', 'history'] });
         },
     });

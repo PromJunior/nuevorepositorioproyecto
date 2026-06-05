@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import {
-    Calendar, FileText, Table as TableIcon, Eye, Printer,
+    Calendar, Eye, Printer,
     Trash2, Search, DollarSign, Receipt, TrendingUp,
     X, SlidersHorizontal, RefreshCw
 } from 'lucide-react';
@@ -13,10 +13,19 @@ import { useAuthStore } from '../../../shared/store/useAuthStore';
 import { orderService } from '../../../services/orderService';
 import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
 import { UserFilter } from '../../../shared/components/UserFilter';
+import { ExportButtons } from '../../../shared/components/ExportButtons';
 
 const MySwal = withReactContent(Swal);
 const MotionDiv = motion.div;
 const MotionTr = motion.tr;
+
+const ORDER_COLUMNS = [
+    { key: 'id', label: 'ID Venta' },
+    { key: 'order_date', label: 'Fecha y Hora', value: (order) => new Date(order.order_date).toLocaleString('es-PE') },
+    { key: 'client', label: 'Cliente Comercial', value: (order) => order.client?.full_name || 'Venta Mostrador' },
+    { key: 'payment_method', label: 'Metodo Pago', value: (order) => order.payment_method?.name_payment_method || 'N/A' },
+    { key: 'total_amount', label: 'Monto Total', value: (order) => Number(order.total_amount || 0) },
+];
 
 // ================= ORIENTACIÓN DE ANIMACIONES (Framer Motion) =================
 const containerVariants = {
@@ -130,39 +139,6 @@ const Orders = () => {
         return Object.keys(dailyMap).map(date => ({ date, monto: dailyMap[date] })).reverse();
     };
 
-    // --- FUNCIONES DE EXPORTACIÓN ---
-    const exportToExcel = async () => {
-        const XLSX = await import('xlsx');
-        const dataToExport = filteredOrders.map(order => ({
-            ID: order.id,
-            Fecha: new Date(order.order_date).toLocaleString(),
-            Cliente: order.client?.full_name || 'Venta Mostrador',
-            Total: order.total_amount,
-            Metodo: order.payment_method?.name_payment_method || 'N/A'
-        }));
-        const ws = XLSX.utils.json_to_sheet(dataToExport);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Ventas");
-        XLSX.writeFile(wb, `Reporte_Ventas_${new Date().toLocaleDateString()}.xlsx`);
-    };
-
-    const exportToPDF = async () => {
-        const { jsPDF } = await import('jspdf');
-        await import('jspdf-autotable');
-        const doc = new jsPDF();
-        doc.text("Reporte de Ventas - SHOP PRO", 14, 15);
-        const tableColumn = ["ID", "Fecha", "Cliente", "Método", "Total"];
-        const tableRows = filteredOrders.map(order => [
-            order.id,
-            new Date(order.order_date).toLocaleString(),
-            order.client?.full_name || 'Venta Mostrador',
-            order.payment_method?.name_payment_method || 'N/A',
-            `$${order.total_amount.toFixed(2)}`
-        ]);
-        doc.autoTable({ head: [tableColumn], body: tableRows, startY: 20 });
-        doc.save(`Reporte_Ventas_${new Date().toLocaleDateString()}.pdf`);
-    };
-
     const handlePrintTicket = (order) => {
         const ventanaImpresion = window.open('', '_blank');
         const itemsHtml = order.order_items_order.map(item => `
@@ -224,12 +200,16 @@ const Orders = () => {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <button onClick={exportToPDF} className="flex items-center gap-2 bg-white text-slate-700 hover:text-red-600 px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm hover:border-red-200 active:scale-[0.98] transition-all font-semibold text-xs uppercase tracking-wider">
-                        <FileText size={15} className="text-slate-400 group-hover:text-red-500" /> PDF
-                    </button>
-                    <button onClick={exportToExcel} className="flex items-center gap-2 bg-white text-slate-700 hover:text-emerald-600 px-4 py-2.5 rounded-xl border border-slate-200 shadow-sm hover:border-emerald-200 active:scale-[0.98] transition-all font-semibold text-xs uppercase tracking-wider">
-                        <TableIcon size={15} className="text-slate-400 group-hover:text-emerald-500" /> Excel
-                    </button>
+                    <ExportButtons
+                        data={filteredOrders}
+                        columns={ORDER_COLUMNS}
+                        filters={filters}
+                        filename="ventas"
+                        module="sales"
+                        title="Historial de Transacciones"
+                        disabled={filteredOrders.length === 0}
+                        totals={{ 'ID Venta': 'TOTAL', 'Monto Total': totalRevenue }}
+                    />
                 </div>
             </header>
 

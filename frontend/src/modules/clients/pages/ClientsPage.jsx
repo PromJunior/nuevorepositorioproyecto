@@ -8,6 +8,7 @@ import { DataState } from '../../../shared/components/DataState';
 import { Modal } from '../../../shared/components/Modal';
 import { Pagination } from '../../../shared/components/Pagination';
 import { Button } from '../../../shared/components/ui/button';
+import { ExportButtons } from '../../../shared/components/ExportButtons';
 import { useAuthStore } from '../../../shared/store/useAuthStore';
 import { ROUTES } from '../../../constants/routes';
 import { ClientForm } from '../components/ClientForm';
@@ -20,6 +21,24 @@ import { emptyClientForm, toClientPayload, validateClientForm } from '../schemas
 
 const MySwal = withReactContent(Swal);
 const PAGE_SIZE = 20;
+
+const CLIENT_COLUMNS = [
+    { key: 'dni', label: 'DNI' },
+    { key: 'full_name', label: 'Cliente' },
+    { key: 'email', label: 'Email' },
+    { key: 'phone', label: 'Telefono' },
+    { key: 'is_active', label: 'Estado', value: (client) => client.is_active ? 'Activo' : 'Inactivo' },
+];
+
+const CRM_COLUMNS = [
+    { key: 'full_name', label: 'Cliente' },
+    { key: 'dni', label: 'DNI' },
+    { key: 'segment', label: 'Segmento' },
+    { key: 'recency_days', label: 'Recency' },
+    { key: 'frequency', label: 'Frecuencia' },
+    { key: 'monetary', label: 'Monetary' },
+    { key: 'last_purchase', label: 'Ultima compra' },
+];
 
 const toForm = (client) => ({
     dni: client?.dni || '',
@@ -156,18 +175,29 @@ const ClientsPage = () => {
                 <div className="space-y-3">
                     <div className="flex flex-col gap-3 rounded-lg bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
                         <span className="text-xs font-black uppercase tracking-widest text-slate-400">Segmentacion comercial</span>
-                        <select
-                            value={segment}
-                            onChange={(event) => setSegment(event.target.value)}
-                            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500"
-                        >
-                            <option value="">Todos los segmentos</option>
-                            <option value="VIP">VIP</option>
-                            <option value="Frecuente">Frecuente</option>
-                            <option value="Ocasional">Ocasional</option>
-                            <option value="Inactivo">Inactivo</option>
-                            <option value="Nuevo">Nuevo</option>
-                        </select>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <select
+                                value={segment}
+                                onChange={(event) => setSegment(event.target.value)}
+                                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500"
+                            >
+                                <option value="">Todos los segmentos</option>
+                                <option value="VIP">VIP</option>
+                                <option value="Frecuente">Frecuente</option>
+                                <option value="Ocasional">Ocasional</option>
+                                <option value="Inactivo">Inactivo</option>
+                                <option value="Nuevo">Nuevo</option>
+                            </select>
+                            <ExportButtons
+                                data={crmClients}
+                                columns={CRM_COLUMNS}
+                                filters={{ segment }}
+                                filename="crm"
+                                module="crm"
+                                title="CRM Clientes"
+                                disabled={crmClients.length === 0}
+                            />
+                        </div>
                     </div>
                     <ClientCrmTable clients={crmClients} onView={(client) => navigate(`${ROUTES.clients}/${client.id}`)} />
                 </div>
@@ -210,7 +240,18 @@ const ClientsPage = () => {
                         <span className="text-xs font-bold text-slate-400">
                             {filtered.length} cliente{filtered.length !== 1 ? 's' : ''}
                         </span>
-                        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                        <div className="flex flex-wrap items-center gap-3">
+                            <ExportButtons
+                                data={filtered}
+                                columns={CLIENT_COLUMNS}
+                                filters={{ query, status }}
+                                filename="clients_delta"
+                                module="clients"
+                                title="Clientes"
+                                disabled={filtered.length === 0}
+                            />
+                            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                        </div>
                     </div>
                     <ClientTable
                         clients={paginated}

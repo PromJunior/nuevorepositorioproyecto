@@ -22,8 +22,19 @@ import { SessionStatusBadge } from '../components/SessionStatusBadge';
 import { PaymentMethodFilter } from '../../../shared/components/PaymentMethodFilter';
 import { UserFilter } from '../../../shared/components/UserFilter';
 import { useRuntimeSettings } from '../../settings/hooks/useSettings';
+import { ExportButtons } from '../../../shared/components/ExportButtons';
 
 const MySwal = withReactContent(Swal);
+const CASH_COLUMNS = [
+    { key: 'user', label: 'Usuario', value: (session) => session.user?.username || session.username || session.user_id || '' },
+    { key: 'opening_time', label: 'Apertura', value: (session) => formatDateTime(session.opening_time) },
+    { key: 'closing_time', label: 'Cierre', value: (session) => session.closing_time ? formatDateTime(session.closing_time) : '' },
+    { key: 'opening_amount', label: 'Fondo inicial', value: (session) => Number(session.opening_amount || 0) },
+    { key: 'expected_amount', label: 'Esperado', value: (session) => Number(session.expected_amount || 0) },
+    { key: 'closing_amount', label: 'Contado', value: (session) => Number(session.closing_amount || 0) },
+    { key: 'difference', label: 'Diferencia', value: (session) => Number(session.difference || 0) },
+    { key: 'status', label: 'Estado' },
+];
 
 const CashSessionPage = () => {
     const user = useAuthStore((s) => s.user);
@@ -233,9 +244,20 @@ const CashSessionPage = () => {
 
             {/* ─── Historial ───────────────────────────────────────────── */}
             <div>
-                <h2 className="mb-3 text-[11px] font-black uppercase tracking-widest text-slate-400">
-                    Historial de sesiones
-                </h2>
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400">
+                        Historial de sesiones
+                    </h2>
+                    <ExportButtons
+                        data={historyQuery.data || []}
+                        columns={CASH_COLUMNS}
+                        filters={{ payment_method_id: paymentMethodId, user_id: userId }}
+                        filename="cash_sessions"
+                        module="cash"
+                        title="Historial de sesiones"
+                        disabled={!historyQuery.data?.length}
+                    />
+                </div>
                 {historyQuery.isLoading ? (
                     <div className="flex items-center gap-2 text-xs font-semibold text-slate-400">
                         <Loader2 size={13} className="animate-spin" /> Cargando historial...

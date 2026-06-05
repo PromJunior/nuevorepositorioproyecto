@@ -37,6 +37,14 @@ const exportSalesExcel = async (filters = {}) => {
     downloadBlob(response.data, `ventas_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
+const exportSalesCsv = async (filters = {}) => {
+    const response = await apiClient.get('/reports/sales/export/csv', {
+        params: clean(filters),
+        responseType: 'blob',
+    });
+    downloadBlob(response.data, `ventas_${new Date().toISOString().slice(0, 10)}.csv`);
+};
+
 const exportSalesPdf = async (filters = {}) => {
     const response = await apiClient.get('/reports/sales/export/pdf', {
         params: clean(filters),
@@ -59,6 +67,14 @@ const exportPurchasesExcel = async (filters = {}) => {
     downloadBlob(response.data, `compras_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
+const exportPurchasesCsv = async (filters = {}) => {
+    const response = await apiClient.get('/reports/purchases/export/csv', {
+        params: clean(filters),
+        responseType: 'blob',
+    });
+    downloadBlob(response.data, `compras_${new Date().toISOString().slice(0, 10)}.csv`);
+};
+
 const exportPurchasesPdf = async (filters = {}) => {
     const response = await apiClient.get('/reports/purchases/export/pdf', {
         params: clean(filters),
@@ -79,6 +95,14 @@ const exportKardexExcel = async (filters = {}) => {
         responseType: 'blob',
     });
     downloadBlob(response.data, `kardex_${new Date().toISOString().slice(0, 10)}.xlsx`);
+};
+
+const exportKardexCsv = async (filters = {}) => {
+    const response = await apiClient.get('/reports/kardex/export/csv', {
+        params: clean(filters),
+        responseType: 'blob',
+    });
+    downloadBlob(response.data, `kardex_${new Date().toISOString().slice(0, 10)}.csv`);
 };
 
 const exportKardexPdf = async (filters = {}) => {
@@ -132,6 +156,14 @@ const exportCashExcel = async (filters = {}) => {
     downloadBlob(response.data, `caja_${new Date().toISOString().slice(0, 10)}.xlsx`);
 };
 
+const exportCashCsv = async (filters = {}) => {
+    const response = await apiClient.get('/reports/cash/export/csv', {
+        params: clean(filters),
+        responseType: 'blob',
+    });
+    downloadBlob(response.data, `caja_${new Date().toISOString().slice(0, 10)}.csv`);
+};
+
 const exportCashPdf = async (filters = {}) => {
     const response = await apiClient.get('/reports/cash/export/pdf', {
         params: clean(filters),
@@ -148,15 +180,19 @@ const getAuditLogs = async (filters = {}) => {
 
 export const reportService = {
     getSalesReport,
+    exportSalesCsv,
     exportSalesExcel,
     exportSalesPdf,
     getPurchasesReport,
+    exportPurchasesCsv,
     exportPurchasesExcel,
     exportPurchasesPdf,
     getKardexReport,
+    exportKardexCsv,
     exportKardexExcel,
     exportKardexPdf,
     getCashReport,
+    exportCashCsv,
     exportCashExcel,
     exportCashPdf,
     getCrmReport,

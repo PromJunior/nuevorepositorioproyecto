@@ -45,6 +45,14 @@ export const kardexService = {
         downloadBlob(response.data, `resumen_diario_kardex_${new Date().toISOString().slice(0, 10)}.xlsx`);
     },
 
+    exportDailySummaryCsv: async (params = {}) => {
+        const response = await apiClient.get('/reports/kardex/daily-summary/export/csv', {
+            params: cleanParams(params),
+            responseType: 'blob',
+        });
+        downloadBlob(response.data, `resumen_diario_kardex_${new Date().toISOString().slice(0, 10)}.csv`);
+    },
+
     exportDailySummaryPdf: async (params = {}) => {
         const response = await apiClient.get('/reports/kardex/daily-summary/export/pdf', {
             params: cleanParams(params),

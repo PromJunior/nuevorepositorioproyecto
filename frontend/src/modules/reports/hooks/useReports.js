@@ -61,12 +61,16 @@ export const useExportReport = () =>
     useMutation({
         mutationFn: ({ type, format, filters }) => {
             const map = {
+                'sales-csv':       () => reportService.exportSalesCsv(filters),
                 'sales-excel':     () => reportService.exportSalesExcel(filters),
                 'sales-pdf':       () => reportService.exportSalesPdf(filters),
+                'purchases-csv':   () => reportService.exportPurchasesCsv(filters),
                 'purchases-excel': () => reportService.exportPurchasesExcel(filters),
                 'purchases-pdf':   () => reportService.exportPurchasesPdf(filters),
+                'kardex-csv':      () => reportService.exportKardexCsv(filters),
                 'kardex-excel':    () => reportService.exportKardexExcel(filters),
                 'kardex-pdf':      () => reportService.exportKardexPdf(filters),
+                'cash-csv':        () => reportService.exportCashCsv(filters),
                 'cash-excel':      () => reportService.exportCashExcel(filters),
                 'cash-pdf':        () => reportService.exportCashPdf(filters),
                 'crm-excel':       () => reportService.exportCrmExcel(filters),
