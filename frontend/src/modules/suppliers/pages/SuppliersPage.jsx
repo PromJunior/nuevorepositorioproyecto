@@ -9,6 +9,7 @@ import { Button } from '../../../shared/components/ui/button';
 import { Input } from '../../../shared/components/ui/input';
 import { Modal } from '../../../shared/components/Modal';
 import { Pagination } from '../../../shared/components/Pagination';
+import { ExportButtons } from '../../../shared/components/ExportButtons';
 import { useSuppliers, useCreateSupplier, useUpdateSupplier } from '../hooks/useSuppliers';
 import { SupplierTable } from '../components/SupplierTable';
 import { SupplierForm } from '../components/SupplierForm';
@@ -17,6 +18,12 @@ import { SupplierDetail } from '../components/SupplierDetail';
 const MySwal = withReactContent(Swal);
 const PAGE_SIZE = 20;
 const EMPTY_FORM = { ruc: '', company_name: '', phone: '', email: '' };
+const SUPPLIER_COLUMNS = [
+    { key: 'ruc', label: 'RUC' },
+    { key: 'company_name', label: 'Proveedor' },
+    { key: 'phone', label: 'Telefono' },
+    { key: 'email', label: 'Email' },
+];
 
 const SuppliersPage = () => {
     const [query, setQuery] = useState('');
@@ -120,7 +127,18 @@ const SuppliersPage = () => {
                         <span className="text-xs font-bold text-slate-400">
                             {filtered.length} proveedor{filtered.length !== 1 ? 'es' : ''}
                         </span>
-                        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                        <div className="flex flex-wrap items-center gap-3">
+                            <ExportButtons
+                                data={filtered}
+                                columns={SUPPLIER_COLUMNS}
+                                filters={{ query }}
+                                filename="suppliers_snapshot"
+                                module="suppliers"
+                                title="Gestion de proveedores"
+                                disabled={filtered.length === 0}
+                            />
+                            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                        </div>
                     </div>
 
                     <SupplierTable

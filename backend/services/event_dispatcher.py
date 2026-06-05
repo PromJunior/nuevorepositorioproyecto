@@ -98,11 +98,26 @@ def emit_stock_low_if_needed(db: Session, product: Product) -> dict[str, Any] | 
     return None
 
 
-def emit_report_generated(report_type: str, generated_by: str) -> dict[str, Any] | None:
+def emit_report_generated(
+    report_type: str | None = None,
+    generated_by: str = "",
+    module: str | None = None,
+    format: str | None = None,
+    filename: str | None = None,
+    filters: dict[str, Any] | None = None,
+) -> dict[str, Any] | None:
+    if report_type and (not module or not format):
+        parts = report_type.split(".", 1)
+        module = module or parts[0]
+        format = format or (parts[1] if len(parts) > 1 else "")
+
     return _safe_emit(
         "report.generated",
         {
-            "report_type": report_type,
+            "module": module or report_type or "",
+            "format": format or "",
+            "filename": filename or "",
+            "filters": filters or {},
             "generated_by": generated_by or "",
         },
     )

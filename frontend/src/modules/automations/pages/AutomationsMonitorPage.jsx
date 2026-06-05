@@ -5,6 +5,7 @@ import { PageHeader } from '../../../shared/components/PageHeader';
 import { DataState } from '../../../shared/components/DataState';
 import { Button } from '../../../shared/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableRow } from '../../../shared/components/Table';
+import { ExportButtons } from '../../../shared/components/ExportButtons';
 import { useAuthStore } from '../../../store/authStore';
 import { useAutomationEvents, useRetryAutomationEvent } from '../hooks/useAutomations';
 
@@ -21,6 +22,15 @@ const ResultBadge = ({ success }) => (
         {success ? 'OK' : 'ERROR'}
     </span>
 );
+
+const AUTOMATION_COLUMNS = [
+    { key: 'timestamp', label: 'Fecha', value: (event) => formatDate(event.timestamp) },
+    { key: 'event', label: 'Evento' },
+    { key: 'success', label: 'Resultado', value: (event) => event.success ? 'OK' : 'ERROR' },
+    { key: 'duration_ms', label: 'Duracion' },
+    { key: 'status_code', label: 'HTTP' },
+    { key: 'message', label: 'Detalle' },
+];
 
 const AutomationsMonitorPage = () => {
     const role = useAuthStore((state) => state.role);
@@ -45,10 +55,20 @@ const AutomationsMonitorPage = () => {
                 title="Automations Monitor"
                 description="Ultimos eventos enviados por el ERP."
                 actions={(
-                    <Button variant="secondary" onClick={() => eventsQuery.refetch()} disabled={eventsQuery.isFetching}>
-                        <RefreshCw size={15} className={eventsQuery.isFetching ? 'animate-spin' : ''} />
-                        Actualizar
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <ExportButtons
+                            data={events}
+                            columns={AUTOMATION_COLUMNS}
+                            filename="automation_logs"
+                            module="automations"
+                            title="Automations Monitor"
+                            disabled={events.length === 0}
+                        />
+                        <Button variant="secondary" onClick={() => eventsQuery.refetch()} disabled={eventsQuery.isFetching}>
+                            <RefreshCw size={15} className={eventsQuery.isFetching ? 'animate-spin' : ''} />
+                            Actualizar
+                        </Button>
+                    </div>
                 )}
             />
 

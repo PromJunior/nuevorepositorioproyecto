@@ -500,7 +500,7 @@ const ReportsPage = () => {
             <PageHeader
                 eyebrow="Reportes"
                 title="Reportes y exportaciones"
-                description="Filtra, analiza y exporta datos del ERP a Excel o PDF."
+                description="Filtra, analiza y exporta datos del ERP a CSV, Excel o PDF."
             />
 
             {/* Tabs */}
