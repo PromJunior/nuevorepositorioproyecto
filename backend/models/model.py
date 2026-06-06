@@ -385,6 +385,19 @@ class WebhookLog(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class DriveExportLog(Base):
+    __tablename__ = "drive_export_logs"
+
+    id = Column(Integer, autoincrement=True, primary_key=True, index=True)
+    filename = Column(String(255), nullable=False, index=True)
+    module = Column(String(100), nullable=True, index=True)
+    status = Column(String(50), nullable=False)
+    duration_ms = Column(Integer, nullable=True)
+    drive_file_id = Column(String(255), nullable=True, index=True)
+    message = Column(String(500), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 #-----------------------> CONFIGURACION GLOBAL DEL ERP <------------------------
 class CompanySettings(Base):
     __tablename__ = "company_settings"

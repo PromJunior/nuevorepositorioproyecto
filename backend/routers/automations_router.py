@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from auth.security import get_current_user, get_current_admin_user, get_user_role_name
 from database.database import get_db
-from models.model import User, WebhookLog
+from models.model import DriveExportLog, User, WebhookLog
 from services.webhook_service import send_webhook_event
 
 router = APIRouter(prefix="/automations", tags=["Automations"])
@@ -12,6 +12,15 @@ router = APIRouter(prefix="/automations", tags=["Automations"])
 
 class RetryEventRequest(BaseModel):
     log_id: int
+
+
+class DriveExportLogRequest(BaseModel):
+    filename: str
+    module: str | None = None
+    status: str
+    duration_ms: int | None = None
+    drive_file_id: str | None = None
+    message: str | None = None
 
 
 def require_automation_viewer(current_user: User = Depends(get_current_user)):
@@ -34,6 +43,19 @@ def _log_to_dict(log: WebhookLog) -> dict:
         "duration_ms": log.duration_ms,
         "status_code": log.status_code,
         "destination_url": log.destination_url,
+        "message": log.message,
+    }
+
+
+def _drive_log_to_dict(log: DriveExportLog) -> dict:
+    return {
+        "id": log.id,
+        "timestamp": log.created_at,
+        "filename": log.filename,
+        "module": log.module,
+        "status": log.status,
+        "duration_ms": log.duration_ms,
+        "drive_file_id": log.drive_file_id,
         "message": log.message,
     }
 
@@ -118,3 +140,48 @@ def retry_event(
             detail=result.get("message", "No se pudo reenviar el evento"),
         )
     return {"success": True, "message": "Evento reenviado correctamente", "result": result}
+
+
+@router.post("/drive-uploads/log")
+def create_drive_upload_log(
+    data: DriveExportLogRequest,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_admin_user),
+):
+    log = DriveExportLog(
+        filename=data.filename,
+        module=data.module,
+        status=data.status.upper(),
+        duration_ms=data.duration_ms,
+        drive_file_id=data.drive_file_id,
+        message=(data.message or "")[:500],
+    )
+    db.add(log)
+    db.commit()
+    db.refresh(log)
+    return _drive_log_to_dict(log)
+
+
+@router.get("/drive-uploads/logs")
+def list_drive_upload_logs(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=500),
+    module: str | None = None,
+    status: str | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_automation_viewer),
+):
+    query = db.query(DriveExportLog)
+    if module:
+        query = query.filter(DriveExportLog.module == module)
+    if status:
+        query = query.filter(DriveExportLog.status == status.upper())
+
+    total = query.count()
+    logs = (
+        query.order_by(DriveExportLog.created_at.desc(), DriveExportLog.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return {"total": total, "items": [_drive_log_to_dict(log) for log in logs]}

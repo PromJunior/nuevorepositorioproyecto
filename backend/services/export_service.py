@@ -45,15 +45,20 @@ def normalize_export_rows(rows: list[Any], columns: list[dict[str, str]]) -> lis
     ]
 
 
-def build_csv_response(rows: list[Any], columns: list[dict[str, str]], filename: str) -> StreamingResponse:
+def build_csv_content(rows: list[Any], columns: list[dict[str, str]]) -> str:
     output = StringIO()
     writer = csv.writer(output)
     writer.writerow([column["label"] for column in columns])
     for row in normalize_export_rows(rows, columns):
         writer.writerow([row.get(column["key"], "") for column in columns])
     output.seek(0)
+    return output.getvalue()
+
+
+def build_csv_response(rows: list[Any], columns: list[dict[str, str]], filename: str) -> StreamingResponse:
+    content = build_csv_content(rows, columns)
     return StreamingResponse(
-        iter([output.getvalue()]),
+        iter([content]),
         media_type="text/csv",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
