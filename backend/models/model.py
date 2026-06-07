@@ -391,11 +391,28 @@ class DriveExportLog(Base):
     id = Column(Integer, autoincrement=True, primary_key=True, index=True)
     filename = Column(String(255), nullable=False, index=True)
     module = Column(String(100), nullable=True, index=True)
+    incremental = Column(Boolean, nullable=False, default=False, server_default=text("0"))
+    rows_count = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    last_exported_id = Column(Integer, nullable=True)
     status = Column(String(50), nullable=False)
     duration_ms = Column(Integer, nullable=True)
     drive_file_id = Column(String(255), nullable=True, index=True)
     message = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class ExportTracking(Base):
+    __tablename__ = "export_tracking"
+
+    id = Column(Integer, autoincrement=True, primary_key=True, index=True)
+    module = Column(String(100), nullable=False, unique=True, index=True)
+    last_exported_id = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    last_exported_at = Column(DateTime, nullable=True)
+    last_filename = Column(String(255), nullable=True)
+    last_rows_count = Column(Integer, nullable=False, default=0, server_default=text("0"))
+    status = Column(String(50), nullable=False, default="PENDING", server_default=text("'PENDING'"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 #-----------------------> CONFIGURACION GLOBAL DEL ERP <------------------------

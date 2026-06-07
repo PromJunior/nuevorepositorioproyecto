@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { FileSpreadsheet, FileText, Loader2, Table } from 'lucide-react';
 import apiClient from '../../services/api/client';
 import { Button } from './ui/button';
-import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const today = () => new Date().toISOString().slice(0, 10);

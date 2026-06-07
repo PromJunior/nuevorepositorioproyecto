@@ -7,7 +7,12 @@ import { Button } from '../../../shared/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableRow } from '../../../shared/components/Table';
 import { ExportButtons } from '../../../shared/components/ExportButtons';
 import { useAuthStore } from '../../../store/authStore';
-import { useAutomationEvents, useRetryAutomationEvent } from '../hooks/useAutomations';
+import {
+    useAutomationEvents,
+    useExportTracking,
+    useResetExportTracking,
+    useRetryAutomationEvent,
+} from '../hooks/useAutomations';
 
 const formatDate = (value) => {
     if (!value) return '-';
@@ -23,6 +28,22 @@ const ResultBadge = ({ success }) => (
     </span>
 );
 
+const StatusBadge = ({ status }) => {
+    const normalized = (status || 'PENDING').toUpperCase();
+    const styles = {
+        OK: 'bg-emerald-50 text-emerald-700',
+        EMPTY: 'bg-amber-50 text-amber-700',
+        RESET: 'bg-blue-50 text-blue-700',
+        ERROR: 'bg-rose-50 text-rose-700',
+        PENDING: 'bg-slate-100 text-slate-600',
+    };
+    return (
+        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${styles[normalized] || styles.PENDING}`}>
+            {normalized}
+        </span>
+    );
+};
+
 const AUTOMATION_COLUMNS = [
     { key: 'timestamp', label: 'Fecha', value: (event) => formatDate(event.timestamp) },
     { key: 'event', label: 'Evento' },
@@ -35,9 +56,13 @@ const AUTOMATION_COLUMNS = [
 const AutomationsMonitorPage = () => {
     const role = useAuthStore((state) => state.role);
     const canRetry = role === 'admin';
+    const canReset = role === 'admin';
     const eventsQuery = useAutomationEvents();
     const retryEvent = useRetryAutomationEvent();
+    const trackingQuery = useExportTracking();
+    const resetTracking = useResetExportTracking();
     const events = eventsQuery.data || [];
+    const trackingItems = trackingQuery.data || [];
 
     const handleRetry = async (eventId) => {
         try {
@@ -45,6 +70,26 @@ const AutomationsMonitorPage = () => {
             Swal.fire({ icon: 'success', title: 'Evento reenviado', timer: 1300, showConfirmButton: false });
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'No se pudo reenviar', text: error.response?.data?.detail || error.message });
+        }
+    };
+
+    const handleResetTracking = async (module) => {
+        const result = await Swal.fire({
+            icon: 'warning',
+            title: `Reiniciar ${module}`,
+            text: 'La proxima exportacion incremental volvera a enviar el modulo desde cero.',
+            showCancelButton: true,
+            confirmButtonText: 'Reiniciar',
+            cancelButtonText: 'Cancelar',
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            await resetTracking.mutateAsync(module);
+            Swal.fire({ icon: 'success', title: 'Tracking reiniciado', timer: 1300, showConfirmButton: false });
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'No se pudo reiniciar', text: error.response?.data?.detail || error.message });
         }
     };
 
@@ -127,6 +172,70 @@ const AutomationsMonitorPage = () => {
                     </TableBody>
                 </Table>
             </DataState>
+
+            <section className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 className="text-base font-black text-slate-900">Exportacion incremental</h2>
+                        <p className="text-sm text-slate-500">Estado del backup CSV para Google Drive.</p>
+                    </div>
+                    <Button variant="secondary" onClick={() => trackingQuery.refetch()} disabled={trackingQuery.isFetching}>
+                        <RefreshCw size={15} className={trackingQuery.isFetching ? 'animate-spin' : ''} />
+                        Actualizar
+                    </Button>
+                </div>
+
+                <DataState
+                    isLoading={trackingQuery.isLoading}
+                    isError={trackingQuery.isError}
+                    isEmpty={!trackingQuery.isLoading && trackingItems.length === 0}
+                    loadingLabel="Cargando tracking..."
+                    errorTitle="No se pudo cargar el tracking"
+                    errorDescription={trackingQuery.error?.response?.data?.detail || trackingQuery.error?.message}
+                    emptyTitle="Sin modulos incrementales"
+                    emptyDescription="Cuando se habilite el tracking aparecera aqui."
+                >
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell as="th">Modulo</TableCell>
+                                <TableCell as="th">Ultimo ID</TableCell>
+                                <TableCell as="th">Ultima fecha</TableCell>
+                                <TableCell as="th">Ultimo archivo</TableCell>
+                                <TableCell as="th">Filas</TableCell>
+                                <TableCell as="th">Estado</TableCell>
+                                {canReset && <TableCell as="th" className="text-right">Accion</TableCell>}
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {trackingItems.map((item) => (
+                                <TableRow key={item.module}>
+                                    <TableCell className="font-black text-slate-900">{item.module}</TableCell>
+                                    <TableCell className="font-semibold">{item.last_exported_id ?? 0}</TableCell>
+                                    <TableCell className="font-semibold text-slate-700">{formatDate(item.last_exported_at)}</TableCell>
+                                    <TableCell className="max-w-xs truncate text-slate-500">{item.last_filename || '-'}</TableCell>
+                                    <TableCell className="font-semibold">{item.last_rows_count ?? 0}</TableCell>
+                                    <TableCell><StatusBadge status={item.status} /></TableCell>
+                                    {canReset && (
+                                        <TableCell className="text-right">
+                                            <Button
+                                                variant="secondary"
+                                                className="gap-1.5 text-xs"
+                                                onClick={() => handleResetTracking(item.module)}
+                                                disabled={resetTracking.isPending}
+                                                title="Reiniciar tracking"
+                                            >
+                                                <RotateCcw size={14} />
+                                                Reset
+                                            </Button>
+                                        </TableCell>
+                                    )}
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </DataState>
+            </section>
         </div>
     );
 };

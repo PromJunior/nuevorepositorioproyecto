@@ -3,6 +3,7 @@ import { automationsService } from '../services/automationsService';
 
 export const automationsKeys = {
     events: ['automations', 'events'],
+    exportTracking: ['automations', 'export-tracking'],
 };
 
 export const useAutomationEvents = () =>
@@ -17,5 +18,20 @@ export const useRetryAutomationEvent = () => {
     return useMutation({
         mutationFn: automationsService.retryEvent,
         onSuccess: () => queryClient.invalidateQueries({ queryKey: automationsKeys.events }),
+    });
+};
+
+export const useExportTracking = () =>
+    useQuery({
+        queryKey: automationsKeys.exportTracking,
+        queryFn: automationsService.getExportTracking,
+        refetchInterval: 30000,
+    });
+
+export const useResetExportTracking = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: automationsService.resetExportTracking,
+        onSuccess: () => queryClient.invalidateQueries({ queryKey: automationsKeys.exportTracking }),
     });
 };

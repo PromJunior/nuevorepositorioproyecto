@@ -120,6 +120,31 @@ def ensure_webhook_log_columns(db: Session):
     db.commit()
 
 
+def ensure_drive_export_log_columns(db: Session):
+    inspector = inspect(db.bind)
+
+    if "drive_export_logs" not in inspector.get_table_names():
+        return
+
+    columns = {
+        column["name"]
+        for column in inspector.get_columns("drive_export_logs")
+    }
+
+    if "incremental" not in columns:
+        column_type = "BIT NOT NULL DEFAULT 0" if db.bind.dialect.name == "mssql" else "BOOLEAN DEFAULT 0"
+        db.execute(text(f"ALTER TABLE drive_export_logs ADD incremental {column_type}"))
+
+    if "rows_count" not in columns:
+        column_type = "INT NOT NULL DEFAULT 0" if db.bind.dialect.name == "mssql" else "INTEGER DEFAULT 0"
+        db.execute(text(f"ALTER TABLE drive_export_logs ADD rows_count {column_type}"))
+
+    if "last_exported_id" not in columns:
+        db.execute(text("ALTER TABLE drive_export_logs ADD last_exported_id INT"))
+
+    db.commit()
+
+
 def ensure_financial_columns_not_null(db: Session):
     if db.bind.dialect.name != "mssql":
         return

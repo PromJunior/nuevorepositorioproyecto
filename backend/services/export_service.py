@@ -176,6 +176,35 @@ def build_pdf_response(
     )
 
 
+CLIENT_EXPORT_COLUMNS = [
+    {"key": "client_id", "label": "client_id"},
+    {"key": "full_name", "label": "full_name"},
+    {"key": "dni", "label": "dni"},
+    {"key": "phone", "label": "phone"},
+    {"key": "email", "label": "email"},
+    {"key": "address", "label": "address"},
+    {"key": "created_at", "label": "created_at"},
+    {"key": "is_active", "label": "is_active"},
+]
+
+
+def export_clients_csv(clients: list[Any]) -> str:
+    rows = [
+        {
+            "client_id": client.id,
+            "full_name": client.full_name,
+            "dni": client.dni,
+            "phone": client.phone,
+            "email": client.email,
+            "address": client.address,
+            "created_at": client.create_at,
+            "is_active": client.is_active,
+        }
+        for client in clients
+    ]
+    return build_csv_content(rows, CLIENT_EXPORT_COLUMNS)
+
+
 def emit_export_event(
     module: str,
     format: str,

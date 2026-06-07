@@ -10,4 +10,14 @@ export const automationsService = {
         const response = await apiClient.post('/automations/events/retry', { log_id: logId });
         return response.data;
     },
+
+    getExportTracking: async () => {
+        const response = await apiClient.get('/exports/tracking');
+        return response.data;
+    },
+
+    resetExportTracking: async (module) => {
+        const response = await apiClient.post('/exports/tracking/reset', { module });
+        return response.data;
+    },
 };

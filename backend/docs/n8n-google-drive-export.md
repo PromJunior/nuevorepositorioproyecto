@@ -75,9 +75,39 @@ Cuando n8n llama este endpoint a partir de un webhook, usar `emit_event=false` p
   "module": "sales",
   "format": "csv",
   "filename": "sales_20260605.csv",
-  "emit_event": false
+  "emit_event": false,
+  "incremental": true
 }
 ```
+
+Para una exportacion manual completa, enviar `incremental=false` o omitirlo:
+
+```json
+{
+  "module": "sales",
+  "format": "csv",
+  "filename": "sales_full.csv",
+  "emit_event": false,
+  "incremental": false
+}
+```
+
+Modulos incrementales soportados:
+
+- `sales` usa `orders.id`
+- `purchases` usa `purchases.id`
+- `inventory` usa `inventory_transactions.id`
+- `cash` usa `cash_sessions.id`
+
+Alias aceptados:
+
+- `kardex` e `inventory_movements` se tratan como `inventory`
+- `cash_sessions` se trata como `cash`
+
+Estado:
+
+- `GET /exports/tracking`
+- `POST /exports/tracking/reset` con `{ "module": "sales" }` requiere admin
 
 ## Workflow n8n
 
@@ -125,9 +155,12 @@ Cuando n8n llama este endpoint a partir de un webhook, usar `emit_event=false` p
   "module": "={{$json.data.module}}",
   "format": "csv",
   "filename": "={{$json.data.filename}}",
-  "emit_event": false
+  "emit_event": false,
+  "incremental": true
 }
 ```
+
+Si el Webhook entrega `kardex`, mapearlo a `inventory` antes de llamar al backend.
 
    - Response format: File
    - Binary property: `data`
@@ -151,6 +184,7 @@ Cuando n8n llama este endpoint a partir de un webhook, usar `emit_event=false` p
 {
   "filename": "={{$json.data.filename}}",
   "module": "={{$json.data.module}}",
+  "incremental": true,
   "status": "OK",
   "duration_ms": "={{$execution.resumeUrl ? 0 : 0}}",
   "drive_file_id": "={{$node['Google Drive Upload'].json.id || $node['Google Drive Update'].json.id}}",

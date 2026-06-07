@@ -17,6 +17,9 @@ class RetryEventRequest(BaseModel):
 class DriveExportLogRequest(BaseModel):
     filename: str
     module: str | None = None
+    incremental: bool = False
+    rows_count: int = 0
+    last_exported_id: int | None = None
     status: str
     duration_ms: int | None = None
     drive_file_id: str | None = None
@@ -53,6 +56,9 @@ def _drive_log_to_dict(log: DriveExportLog) -> dict:
         "timestamp": log.created_at,
         "filename": log.filename,
         "module": log.module,
+        "incremental": bool(log.incremental),
+        "rows_count": log.rows_count,
+        "last_exported_id": log.last_exported_id,
         "status": log.status,
         "duration_ms": log.duration_ms,
         "drive_file_id": log.drive_file_id,
@@ -151,6 +157,9 @@ def create_drive_upload_log(
     log = DriveExportLog(
         filename=data.filename,
         module=data.module,
+        incremental=data.incremental,
+        rows_count=data.rows_count,
+        last_exported_id=data.last_exported_id,
         status=data.status.upper(),
         duration_ms=data.duration_ms,
         drive_file_id=data.drive_file_id,

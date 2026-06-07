@@ -41,6 +41,7 @@ def root():
 
 from database.seed import (
     create_initial_admin,
+    ensure_drive_export_log_columns,
     ensure_payment_method_columns,
     ensure_settings_integration_columns,
     seed_payment_methods,
@@ -57,6 +58,7 @@ def startup_event():
     try:
         ensure_payment_method_columns(db)
         ensure_settings_integration_columns(db)
+        ensure_drive_export_log_columns(db)
         create_initial_admin(db)
         seed_purchase_statuses(db)
         seed_payment_methods(db)
