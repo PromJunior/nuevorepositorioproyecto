@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from auth.security import get_current_user, get_current_admin_user, get_user_role_name
+from auth.security import get_current_user, get_current_admin_user, get_user_role_name, require_admin_or_api_key
 from database.database import get_db
 from models.model import DriveExportLog, User, WebhookLog
 from services.webhook_service import send_webhook_event
@@ -152,7 +152,7 @@ def retry_event(
 def create_drive_upload_log(
     data: DriveExportLogRequest,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin_user),
+    _: User | None = Depends(require_admin_or_api_key),
 ):
     log = DriveExportLog(
         filename=data.filename,

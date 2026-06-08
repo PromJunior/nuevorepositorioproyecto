@@ -1,3 +1,4 @@
+import base64
 import re
 from datetime import date, datetime
 from typing import Any
@@ -7,7 +8,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 
-from auth.security import get_current_admin_user, get_current_user, get_user_role_name
+from auth.security import get_current_admin_user, get_current_user, get_user_role_name, require_admin_or_api_key
 from crud import report_crud
 from crud.settings_crud import get_or_create_company_settings, get_or_create_system_settings
 from database.database import get_db
@@ -43,6 +44,10 @@ class UploadExportRequest(BaseModel):
 
 class ResetExportTrackingRequest(BaseModel):
     module: str = Field(..., min_length=1)
+
+
+class DailyRunRequest(BaseModel):
+    incremental: bool = True
 
 
 DAILY_MODULES = {
@@ -82,6 +87,7 @@ MODULE_EXPORT_TARGETS = {
     "cash": "cash_sessions",
 }
 INCREMENTAL_MODULES = {"sales", "purchases", "inventory", "cash"}
+DAILY_RUN_MODULES = ("sales", "purchases", "inventory", "cash")
 
 EXPORT_COLUMNS = {
     "sales": [
@@ -532,6 +538,102 @@ def _rows_for_module(db: Session, module: str, filters: dict[str, date]) -> list
     if module == "settings_snapshot":
         return _settings_rows(get_or_create_company_settings(db), get_or_create_system_settings(db))
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Modulo de exportacion no soportado")
+
+
+def _run_daily_incremental_module(db: Session, module: str) -> dict[str, Any]:
+    export_module = _export_module(module)
+    filename = _safe_filename(module, None)
+    tracking = _get_or_create_tracking(db, module)
+    last_id = int(tracking.last_exported_id or 0)
+    rows = _incremental_rows_for_module(db, module, last_id)
+    rows_count = len(rows)
+    last_exported_id = max((_row_id(row) for row in rows), default=tracking.last_exported_id)
+    csv_content = build_csv_content(rows, EXPORT_COLUMNS[export_module]) if rows else ""
+    status_value = "SUCCESS" if rows else "EMPTY"
+
+    tracking.last_exported_at = datetime.utcnow()
+    tracking.last_filename = filename
+    tracking.last_rows_count = rows_count
+    tracking.status = "OK" if rows else "EMPTY"
+    if rows:
+        tracking.last_exported_id = int(last_exported_id or 0)
+    tracking.updated_at = datetime.utcnow()
+
+    _log_export(
+        db,
+        module=module,
+        filename=filename,
+        incremental=True,
+        rows_count=rows_count,
+        last_exported_id=int(last_exported_id or 0) if last_exported_id is not None else None,
+        status_value=status_value,
+        message="Daily backup CSV generado" if rows else "Daily backup sin registros nuevos",
+    )
+    db.commit()
+
+    result = {
+        "module": module,
+        "filename": filename,
+        "drive_root": "ERP_BACKUPS",
+        "drive_folder": MODULE_FOLDERS[module],
+        "rows": rows_count,
+        "status": status_value,
+    }
+    if rows:
+        result.update({
+            "mime_type": "text/csv",
+            "content_base64": base64.b64encode(csv_content.encode("utf-8")).decode("ascii"),
+        })
+    return result
+
+
+@router.post("/daily-run")
+def run_daily_backup(
+    payload: DailyRunRequest,
+    db: Session = Depends(get_db),
+    _: User | None = Depends(require_admin_or_api_key),
+):
+    if not payload.incremental:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="daily-run solo permite incremental=true",
+        )
+
+    modules = []
+    for module in DAILY_RUN_MODULES:
+        try:
+            modules.append(_run_daily_incremental_module(db, module))
+        except Exception as exc:
+            db.rollback()
+            filename = _safe_filename(module, None)
+            try:
+                _log_export(
+                    db,
+                    module=module,
+                    filename=filename,
+                    incremental=True,
+                    rows_count=0,
+                    last_exported_id=None,
+                    status_value="ERROR",
+                    message=str(exc),
+                )
+                db.commit()
+            except Exception:
+                db.rollback()
+            modules.append({
+                "module": module,
+                "filename": filename,
+                "drive_root": "ERP_BACKUPS",
+                "drive_folder": MODULE_FOLDERS[module],
+                "rows": 0,
+                "status": "ERROR",
+                "error": str(exc)[:500],
+            })
+
+    return {
+        "success": all(item["status"] != "ERROR" for item in modules),
+        "modules": modules,
+    }
 
 
 @router.post("/upload")

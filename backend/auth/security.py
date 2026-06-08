@@ -1,10 +1,12 @@
+import hmac
+import os
 from database.database import get_db
 from sqlalchemy.orm import Session
 from crud import user_crud
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from auth.password import verify_password, get_password_hash
 from fastapi.security import OAuth2PasswordBearer
 
@@ -15,6 +17,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 400
 
 # Esquema de seguridad para Swagger
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token", auto_error=False)
 
 
 # === GESTIÓN DE TOKENS JWT ===
@@ -94,3 +97,49 @@ def get_current_admin_user(current_user=Depends(get_current_user)):
             detail="No tienes permisos para realizar esta acción"
         )
     return current_user
+
+
+def get_configured_api_key() -> Optional[str]:
+    return (
+        os.getenv("ERP_DAILY_BACKUP_API_KEY")
+        or os.getenv("ERP_BACKUP_API_KEY")
+        or os.getenv("ERP_API_KEY")
+    )
+
+
+def require_admin_or_api_key(
+    db: Session = Depends(get_db),
+    token: str | None = Depends(optional_oauth2_scheme),
+    x_api_key: str | None = Header(default=None, alias="X-API-Key"),
+):
+    configured_key = get_configured_api_key()
+    if configured_key and x_api_key and hmac.compare_digest(x_api_key, configured_key):
+        return None
+
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="No se pudo validar el token o API key",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if not token:
+        raise credentials_exception
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+
+    user = user_crud.get_user_by_username(db, username=username)
+    if user is None:
+        raise credentials_exception
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Usuario inactivo")
+    if (get_user_role_name(user) or "").lower() != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para realizar esta accion",
+        )
+    return user
