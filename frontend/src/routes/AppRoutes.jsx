@@ -25,6 +25,7 @@ const SuppliersPage = lazy(() => import('../modules/suppliers/pages/SuppliersPag
 const ClientsPage = lazy(() => import('../modules/clients/pages/ClientsPage'));
 const ClientDetailPage = lazy(() => import('../modules/clients/pages/ClientDetailPage'));
 const ReportsPage = lazy(() => import('../modules/reports/pages/ReportsPage'));
+const AutomationsMonitorPage = lazy(() => import('../modules/automations/pages/AutomationsMonitorPage'));
 const UsersPage = lazy(() => import('../modules/users/pages/UsersPage'));
 const SettingsPage = lazy(() => import('../modules/settings/pages/SettingsPage'));
 const SaaSGridModule = lazy(() => import('../components/SaaSGrid').then((module) => ({ default: module.SaaSGrid })));
@@ -96,6 +97,10 @@ export const AppRoutes = () => {
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.reports]} />}>
                             <Route path="reportes" element={<LazyPage><ReportsPage /></LazyPage>} />
+                        </Route>
+
+                        <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.automations]} />}>
+                            <Route path="automatizaciones" element={<LazyPage><AutomationsMonitorPage /></LazyPage>} />
                         </Route>
 
                         <Route element={<RoleRoute allowedRoles={ROUTE_PERMISSIONS[ROUTES.users]} />}>

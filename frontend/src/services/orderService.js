@@ -7,6 +7,9 @@ export const orderService = {
     },
 
     createOrder: async (orderData) => {
+        if (!orderData?.client_id) {
+            throw new Error('Cliente invalido');
+        }
         const response = await apiClient.post('/create_order/', orderData);
         return response.data;
     },

@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { Download, FileText } from 'lucide-react';
 import { PageHeader } from '../../../shared/components/PageHeader';
 import { DataState } from '../../../shared/components/DataState';
 import { useInventoryTransactions, useInventorySummary, useKardexDailySummary } from '../hooks/useKardex';
@@ -11,6 +10,7 @@ import { KardexFilters } from '../components/KardexFilters';
 import { KardexTable } from '../components/KardexTable';
 import { kardexService } from '../services/kardexService';
 import { useAuthStore } from '../../../shared/store/useAuthStore';
+import { ExportButtons } from '../../../shared/components/ExportButtons';
 
 const PAGE_SIZE = 50;
 
@@ -54,14 +54,6 @@ const KardexPage = () => {
         setFilters(INITIAL_FILTERS);
         setPage(1);
     }, []);
-
-    const handleExportExcel = useCallback(() => {
-        kardexService.exportDailySummaryExcel(filters);
-    }, [filters]);
-
-    const handleExportPdf = useCallback(() => {
-        kardexService.exportDailySummaryPdf(filters);
-    }, [filters]);
 
     const { items = [], total = 0 } = transactionsQuery.data ?? {};
     const dailyRows = dailySummaryQuery.data ?? [];
@@ -108,20 +100,16 @@ const KardexPage = () => {
                         </div>
                         {isAdmin && (
                         <div className="flex shrink-0 gap-2">
-                            <button
-                                type="button"
-                                onClick={handleExportExcel}
-                                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black text-white hover:bg-emerald-700"
-                            >
-                                <Download size={14} /> Excel
-                            </button>
-                            <button
-                                type="button"
-                                onClick={handleExportPdf}
-                                className="inline-flex items-center gap-2 rounded-lg bg-slate-800 px-3 py-2 text-xs font-black text-white hover:bg-slate-900"
-                            >
-                                <FileText size={14} /> PDF
-                            </button>
+                            <ExportButtons
+                                module="kardex_daily"
+                                title="Resumen Diario Kardex"
+                                columns={[{ key: 'server', label: 'Servidor' }]}
+                                disabled={dailyRows.length === 0}
+                                onExportCsv={() => kardexService.exportDailySummaryCsv(filters)}
+                                onExportExcel={() => kardexService.exportDailySummaryExcel(filters)}
+                                onExportPdf={() => kardexService.exportDailySummaryPdf(filters)}
+                                emitEvent={false}
+                            />
                         </div>
                         )}
                     </div>

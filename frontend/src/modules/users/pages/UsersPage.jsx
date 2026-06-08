@@ -9,6 +9,7 @@ import { Button } from '../../../shared/components/ui/button';
 import { Input } from '../../../shared/components/ui/input';
 import { Modal } from '../../../shared/components/Modal';
 import { Pagination } from '../../../shared/components/Pagination';
+import { ExportButtons } from '../../../shared/components/ExportButtons';
 import { useAuthStore } from '../../../shared/store/useAuthStore';
 import {
     useUsers, useRoles,
@@ -21,6 +22,12 @@ import { UserForm } from '../components/UserForm';
 
 const MySwal = withReactContent(Swal);
 const PAGE_SIZE = 20;
+const USER_COLUMNS = [
+    { key: 'username', label: 'Usuario' },
+    { key: 'fullname', label: 'Nombre' },
+    { key: 'role', label: 'Rol' },
+    { key: 'is_active', label: 'Estado', value: (user) => user.is_active ? 'Activo' : 'Inactivo' },
+];
 
 const EMPTY_FORM = { username: '', fullname: '', role: '', password: '', confirmPassword: '' };
 
@@ -257,7 +264,18 @@ const UsersPage = () => {
                         <span className="text-xs font-bold text-slate-400">
                             {filtered.length} usuario{filtered.length !== 1 ? 's' : ''}
                         </span>
-                        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                        <div className="flex flex-wrap items-center gap-3">
+                            <ExportButtons
+                                data={filtered}
+                                columns={USER_COLUMNS}
+                                filters={{ query, role: filterRole, status: filterStatus }}
+                                filename="users"
+                                module="users"
+                                title="Usuarios y roles"
+                                disabled={filtered.length === 0}
+                            />
+                            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                        </div>
                     </div>
                     <UserTable
                         users={paginated}

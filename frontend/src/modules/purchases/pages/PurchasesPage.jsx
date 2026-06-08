@@ -7,10 +7,19 @@ import { Card } from '../../../shared/components/ui/card';
 import { Button } from '../../../shared/components/ui/button';
 import { Input } from '../../../shared/components/ui/input';
 import { Pagination } from '../../../shared/components/Pagination';
+import { ExportButtons } from '../../../shared/components/ExportButtons';
 import { PurchaseTable } from '../components/PurchaseTable';
 import { usePurchases } from '../hooks/usePurchases';
 
 const PAGE_SIZE = 20;
+const PURCHASE_COLUMNS = [
+    { key: 'id', label: '#' },
+    { key: 'purchase_date', label: 'Fecha', value: (purchase) => new Date(purchase.purchase_date).toLocaleString('es-PE') },
+    { key: 'supplier', label: 'Proveedor', value: (purchase) => purchase.supplier?.company_name || '' },
+    { key: 'invoice_number', label: 'Factura' },
+    { key: 'status', label: 'Estado', value: (purchase) => purchase.status?.name_status || '' },
+    { key: 'total_amount', label: 'Total', value: (purchase) => Number(purchase.total_amount || 0) },
+];
 
 const PurchasesPage = () => {
     const navigate = useNavigate();
@@ -87,7 +96,19 @@ const PurchasesPage = () => {
                         <span className="text-xs font-bold text-slate-400">
                             {filtered.length} compra{filtered.length !== 1 ? 's' : ''}
                         </span>
-                        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                        <div className="flex flex-wrap items-center gap-3">
+                            <ExportButtons
+                                data={filtered}
+                                columns={PURCHASE_COLUMNS}
+                                filters={{ query, status: statusFilter }}
+                                filename="purchases"
+                                module="purchases"
+                                title="Gestion de compras"
+                                disabled={filtered.length === 0}
+                                totals={{ '#': 'TOTAL', Total: filtered.reduce((sum, purchase) => sum + Number(purchase.total_amount || 0), 0) }}
+                            />
+                            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                        </div>
                     </div>
                     <PurchaseTable purchases={paginated} />
                 </div>

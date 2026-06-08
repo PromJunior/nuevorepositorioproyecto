@@ -21,6 +21,7 @@ import { useInventory } from '../hooks/useInventory';
 import { ProductModal } from '../components/ProductModal';
 import { StockModal } from '../components/StockModal';
 import { useAuthStore } from '../../../shared/store/useAuthStore';
+import { ExportButtons } from '../../../shared/components/ExportButtons';
 
 const MySwal = withReactContent(Swal);
 const MotionButton = motion.button;
@@ -52,6 +53,16 @@ const formatCurrency = (value) => {
 };
 
 const getCategoryName = (product) => product.category?.name_category || 'General';
+
+const PRODUCT_COLUMNS = [
+    { key: 'id', label: 'ID' },
+    { key: 'name_product', label: 'Producto' },
+    { key: 'description', label: 'Descripcion' },
+    { key: 'category', label: 'Categoria', value: getCategoryName },
+    { key: 'price', label: 'Precio', value: (product) => Number(product.price || 0) },
+    { key: 'stock', label: 'Stock', value: (product) => Number(product.stock || 0) },
+    { key: 'stockProduct', label: 'Estado', value: (product) => product.stockProduct ? 'Disponible' : 'Agotado' },
+];
 
 const InventoryPage = () => {
     const {
@@ -301,9 +312,21 @@ const InventoryPage = () => {
                         <SlidersHorizontal size={15} className="text-slate-400" />
                         <span>Filtros estructurales</span>
                     </div>
-                    <button onClick={handleClearFilters} className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-600 transition hover:bg-blue-100">
-                        <RefreshCw size={12} /> Limpiar filtros
-                    </button>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <ExportButtons
+                            data={filteredProducts}
+                            columns={PRODUCT_COLUMNS}
+                            filters={{ searchTerm, selectedCategory, sort: `${sortConfig.key}:${sortConfig.direction}` }}
+                            filename="products_snapshot"
+                            module="inventory"
+                            title="Consola de inventario"
+                            disabled={filteredProducts.length === 0}
+                            totals={{ ID: 'TOTAL', Stock: filteredProducts.reduce((sum, product) => sum + Number(product.stock || 0), 0) }}
+                        />
+                        <button onClick={handleClearFilters} className="flex items-center gap-1.5 rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-600 transition hover:bg-blue-100">
+                            <RefreshCw size={12} /> Limpiar filtros
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
