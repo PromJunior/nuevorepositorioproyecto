@@ -59,7 +59,7 @@ La respuesta real incluye campos adicionales para n8n:
 - `filename`
 - `drive_root`
 - `drive_folder`
-- `status`: `SUCCESS`, `EMPTY` o `ERROR`
+- `status`: `SUCCESS`, `SKIPPED` o `ERROR`
 - `mime_type`: solo cuando `rows > 0`
 - `content_base64`: CSV codificado en base64, solo cuando `rows > 0`
 
@@ -74,8 +74,8 @@ Nombre: `ERP Daily Backup`
 Config:
 
 - Trigger interval: `Days`
-- Hour: `00`
-- Minute: `00`
+- Hour: `22`
+- Minute: `30`
 
 Este es el cron diario del backup automatico.
 
@@ -123,7 +123,7 @@ Para cada modulo evaluar:
 Si `rows = 0`:
 
 - No subir archivo.
-- Registrar log con `status=EMPTY`.
+- Registrar log con `status=SKIPPED`.
 
 Si `rows > 0`:
 
@@ -165,7 +165,7 @@ Body para `SUCCESS`:
 }
 ```
 
-Body para `EMPTY`:
+Body para `SKIPPED`:
 
 ```json
 {
@@ -173,7 +173,7 @@ Body para `EMPTY`:
   "filename": "={{$json.filename}}",
   "rows_count": 0,
   "incremental": true,
-  "status": "EMPTY",
+  "status": "SKIPPED",
   "message": "Sin cambios nuevos; no se subio CSV vacio"
 }
 ```
@@ -209,7 +209,7 @@ Campos:
 Estados validos para este flujo:
 
 - `SUCCESS`
-- `EMPTY`
+- `SKIPPED`
 - `ERROR`
 
 ## Como probar

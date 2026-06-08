@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, DateTime, Boolean, JSON, text
+from sqlalchemy import Column, Integer, String, Numeric, ForeignKey, Date, DateTime, Boolean, JSON, Time, text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database.database import Base
@@ -411,6 +411,22 @@ class ExportTracking(Base):
     last_filename = Column(String(255), nullable=True)
     last_rows_count = Column(Integer, nullable=False, default=0, server_default=text("0"))
     status = Column(String(50), nullable=False, default="PENDING", server_default=text("'PENDING'"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class BackupExecutionLog(Base):
+    __tablename__ = "backup_execution_log"
+
+    id = Column(Integer, autoincrement=True, primary_key=True, index=True)
+    scheduled_date = Column(Date, nullable=False, index=True)
+    scheduled_time = Column(Time, nullable=False)
+    executed_at = Column(DateTime, nullable=True)
+    status = Column(String(50), nullable=False, default="PENDING", server_default=text("'PENDING'"), index=True)
+    trigger_type = Column(String(50), nullable=False, default="schedule", server_default=text("'schedule'"))
+    message = Column(String(500), nullable=True)
+    duration_ms = Column(Integer, nullable=True)
+    rows_exported = Column(Integer, nullable=False, default=0, server_default=text("0"))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

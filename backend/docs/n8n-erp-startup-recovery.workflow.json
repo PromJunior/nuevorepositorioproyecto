@@ -1,28 +1,23 @@
 {
-  "name": "ERP Daily Backup",
+  "name": "ERP Startup Recovery",
   "nodes": [
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "field": "days",
-              "triggerAtHour": 22,
-              "triggerAtMinute": 30
-            }
-          ]
-        }
+        "httpMethod": "POST",
+        "path": "erp-startup-recovery",
+        "responseMode": "lastNode",
+        "options": {}
       },
-      "id": "schedule-trigger",
-      "name": "Schedule Trigger",
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
+      "id": "startup-webhook",
+      "name": "Startup Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
       "position": [0, 0]
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "http://127.0.0.1:8000/exports/daily-run",
+        "url": "http://127.0.0.1:8000/exports/run-missed-backup",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -32,13 +27,11 @@
             }
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\n  \"incremental\": true\n}",
+        "sendBody": false,
         "options": {}
       },
-      "id": "erp-daily-run",
-      "name": "ERP Daily Run",
+      "id": "run-missed-backup",
+      "name": "Run Missed Backup",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [240, 0]
@@ -62,7 +55,7 @@
     },
     {
       "parameters": {
-        "jsCode": "return $json.modules.map((module) => ({ json: module }));"
+        "jsCode": "return ($json.modules || []).map((module) => ({ json: module }));"
       },
       "id": "loop-modules",
       "name": "Loop Modulos",
@@ -136,7 +129,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "{\n  \"module\": \"{{$json.module}}\",\n  \"filename\": \"{{$json.filename}}\",\n  \"rows_count\": {{$json.rows}},\n  \"incremental\": true,\n  \"status\": \"SUCCESS\",\n  \"drive_file_id\": \"{{$node['Google Drive Upload'].json.id}}\",\n  \"message\": \"Subido a Google Drive\"\n}",
+        "jsonBody": "{\n  \"module\": \"{{$json.module}}\",\n  \"filename\": \"{{$json.filename}}\",\n  \"rows_count\": {{$json.rows}},\n  \"incremental\": true,\n  \"status\": \"SUCCESS\",\n  \"drive_file_id\": \"{{$node['Google Drive Upload'].json.id}}\",\n  \"message\": \"Subido a Google Drive por recuperacion al iniciar\"\n}",
         "options": {}
       },
       "id": "log-success",
@@ -144,37 +137,13 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [1680, -220]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "http://127.0.0.1:8000/automations/drive-uploads/log",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "X-API-Key",
-              "value": "={{$env.ERP_DAILY_BACKUP_API_KEY}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "{\n  \"module\": \"{{$json.module}}\",\n  \"filename\": \"{{$json.filename}}\",\n  \"rows_count\": 0,\n  \"incremental\": true,\n  \"status\": \"SKIPPED\",\n  \"message\": \"Sin cambios nuevos; no se subio CSV vacio\"\n}",
-        "options": {}
-      },
-      "id": "log-skipped",
-      "name": "Log SKIPPED",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [1200, 0]
     }
   ],
   "connections": {
-    "Schedule Trigger": {
-      "main": [[{ "node": "ERP Daily Run", "type": "main", "index": 0 }]]
+    "Startup Webhook": {
+      "main": [[{ "node": "Run Missed Backup", "type": "main", "index": 0 }]]
     },
-    "ERP Daily Run": {
+    "Run Missed Backup": {
       "main": [[{ "node": "IF Success", "type": "main", "index": 0 }]]
     },
     "IF Success": {
@@ -189,7 +158,7 @@
     "IF Rows > 0": {
       "main": [
         [{ "node": "CSV Base64 to Binary", "type": "main", "index": 0 }],
-        [{ "node": "Log SKIPPED", "type": "main", "index": 0 }]
+        []
       ]
     },
     "CSV Base64 to Binary": {

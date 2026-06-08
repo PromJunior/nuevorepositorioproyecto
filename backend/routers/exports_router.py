@@ -27,6 +27,7 @@ from models.model import (
     SystemSettings,
     User,
 )
+from services.backup_service import backup_status, check_missed_backup, run_backup
 from services.export_service import build_csv_content, emit_export_event, export_clients_csv
 
 router = APIRouter(prefix="/exports", tags=["Exportaciones"])
@@ -48,6 +49,7 @@ class ResetExportTrackingRequest(BaseModel):
 
 class DailyRunRequest(BaseModel):
     incremental: bool = True
+    trigger_type: str = "schedule"
 
 
 DAILY_MODULES = {
@@ -211,6 +213,10 @@ def _safe_filename(module: str, filename: str | None) -> str:
     if module in WEEKLY_MODULES:
         return f"{module}_{today.strftime('%G%V')}.csv"
     return f"{module}_{today.strftime('%Y%m%d')}.csv"
+
+
+def _daily_filename(module: str, scheduled_date: date) -> str:
+    return f"{module}_{scheduled_date.strftime('%Y%m%d')}.csv"
 
 
 def _date_filters(module: str, filename: str | None) -> dict[str, date] | dict:
@@ -540,21 +546,21 @@ def _rows_for_module(db: Session, module: str, filters: dict[str, date]) -> list
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Modulo de exportacion no soportado")
 
 
-def _run_daily_incremental_module(db: Session, module: str) -> dict[str, Any]:
+def _run_daily_incremental_module(db: Session, module: str, scheduled_date: date) -> dict[str, Any]:
     export_module = _export_module(module)
-    filename = _safe_filename(module, None)
+    filename = _daily_filename(module, scheduled_date)
     tracking = _get_or_create_tracking(db, module)
     last_id = int(tracking.last_exported_id or 0)
     rows = _incremental_rows_for_module(db, module, last_id)
     rows_count = len(rows)
     last_exported_id = max((_row_id(row) for row in rows), default=tracking.last_exported_id)
     csv_content = build_csv_content(rows, EXPORT_COLUMNS[export_module]) if rows else ""
-    status_value = "SUCCESS" if rows else "EMPTY"
+    status_value = "SUCCESS" if rows else "SKIPPED"
 
     tracking.last_exported_at = datetime.utcnow()
     tracking.last_filename = filename
     tracking.last_rows_count = rows_count
-    tracking.status = "OK" if rows else "EMPTY"
+    tracking.status = "OK" if rows else "SKIPPED"
     if rows:
         tracking.last_exported_id = int(last_exported_id or 0)
     tracking.updated_at = datetime.utcnow()
@@ -587,25 +593,14 @@ def _run_daily_incremental_module(db: Session, module: str) -> dict[str, Any]:
     return result
 
 
-@router.post("/daily-run")
-def run_daily_backup(
-    payload: DailyRunRequest,
-    db: Session = Depends(get_db),
-    _: User | None = Depends(require_admin_or_api_key),
-):
-    if not payload.incremental:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="daily-run solo permite incremental=true",
-        )
-
+def _run_daily_modules(db: Session, scheduled_date: date) -> list[dict[str, Any]]:
     modules = []
     for module in DAILY_RUN_MODULES:
         try:
-            modules.append(_run_daily_incremental_module(db, module))
+            modules.append(_run_daily_incremental_module(db, module, scheduled_date))
         except Exception as exc:
             db.rollback()
-            filename = _safe_filename(module, None)
+            filename = _daily_filename(module, scheduled_date)
             try:
                 _log_export(
                     db,
@@ -629,11 +624,59 @@ def run_daily_backup(
                 "status": "ERROR",
                 "error": str(exc)[:500],
             })
+    return modules
 
-    return {
-        "success": all(item["status"] != "ERROR" for item in modules),
-        "modules": modules,
-    }
+
+@router.post("/daily-run")
+def run_daily_backup(
+    payload: DailyRunRequest,
+    db: Session = Depends(get_db),
+    _: User | None = Depends(require_admin_or_api_key),
+):
+    if not payload.incremental:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="daily-run solo permite incremental=true",
+        )
+
+    result = run_backup(
+        db,
+        export_runner=_run_daily_modules,
+        trigger_type=payload.trigger_type,
+    )
+    return result
+
+
+@router.get("/backup-status")
+def get_backup_status(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_export_tracking_viewer),
+):
+    return backup_status(db)
+
+
+@router.post("/run-missed-backup")
+def run_missed_backup(
+    db: Session = Depends(get_db),
+    _: User | None = Depends(require_admin_or_api_key),
+):
+    pending = check_missed_backup(db)
+    if not pending:
+        return {
+            "executed": False,
+            "trigger": "startup",
+            "status": "SKIPPED",
+            "message": "No hay backup pendiente",
+            "modules": [],
+        }
+
+    result = run_backup(
+        db,
+        export_runner=_run_daily_modules,
+        trigger_type="startup",
+        scheduled_date=pending.scheduled_date,
+    )
+    return result
 
 
 @router.post("/upload")

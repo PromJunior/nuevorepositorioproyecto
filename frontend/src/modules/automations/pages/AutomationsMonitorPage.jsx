@@ -32,9 +32,12 @@ const StatusBadge = ({ status }) => {
     const normalized = (status || 'PENDING').toUpperCase();
     const styles = {
         OK: 'bg-emerald-50 text-emerald-700',
+        SUCCESS: 'bg-emerald-50 text-emerald-700',
         EMPTY: 'bg-amber-50 text-amber-700',
+        SKIPPED: 'bg-amber-50 text-amber-700',
         RESET: 'bg-blue-50 text-blue-700',
         ERROR: 'bg-rose-50 text-rose-700',
+        FAILED: 'bg-rose-50 text-rose-700',
         PENDING: 'bg-slate-100 text-slate-600',
     };
     return (

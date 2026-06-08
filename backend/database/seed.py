@@ -145,6 +145,30 @@ def ensure_drive_export_log_columns(db: Session):
     db.commit()
 
 
+def ensure_backup_execution_log_columns(db: Session):
+    inspector = inspect(db.bind)
+    dialect_name = db.bind.dialect.name
+
+    if "backup_execution_log" not in inspector.get_table_names():
+        return
+
+    columns = {
+        column["name"]
+        for column in inspector.get_columns("backup_execution_log")
+    }
+
+    column_sql = {
+        "duration_ms": "INT",
+        "rows_exported": "INT NOT NULL DEFAULT 0" if dialect_name == "mssql" else "INTEGER DEFAULT 0",
+    }
+
+    for column_name, column_type in column_sql.items():
+        if column_name not in columns:
+            db.execute(text(f"ALTER TABLE backup_execution_log ADD {column_name} {column_type}"))
+
+    db.commit()
+
+
 def ensure_financial_columns_not_null(db: Session):
     if db.bind.dialect.name != "mssql":
         return

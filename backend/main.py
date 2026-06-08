@@ -41,6 +41,7 @@ def root():
 
 from database.seed import (
     create_initial_admin,
+    ensure_backup_execution_log_columns,
     ensure_drive_export_log_columns,
     ensure_payment_method_columns,
     ensure_settings_integration_columns,
@@ -48,6 +49,8 @@ from database.seed import (
     seed_purchase_statuses,
 )
 from database.database import SessionLocal, Base, engine
+from services.backup_service import notify_missed_backup_if_needed
+from threading import Thread
 import models.model  # noqa: F401  — asegura que todos los modelos estén registrados
 
 @app.on_event("startup")
@@ -59,8 +62,11 @@ def startup_event():
         ensure_payment_method_columns(db)
         ensure_settings_integration_columns(db)
         ensure_drive_export_log_columns(db)
+        ensure_backup_execution_log_columns(db)
         create_initial_admin(db)
         seed_purchase_statuses(db)
         seed_payment_methods(db)
     finally:
         db.close()
+
+    Thread(target=notify_missed_backup_if_needed, daemon=True).start()

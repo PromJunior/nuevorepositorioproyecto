@@ -3,12 +3,13 @@ import Swal from 'sweetalert2';
 import {
     Building2,
     Calculator,
+    CalendarClock,
     ChartNoAxesCombined,
-    ClipboardList,
     CreditCard,
     FileDown,
     Package,
     ReceiptText,
+    Play,
     Save,
     ShoppingBag,
     ShoppingCart,
@@ -31,6 +32,7 @@ import {
 } from '../hooks/useSettings';
 import { Field, FieldGrid, Section, SelectInput, TextInput, Toggle } from '../components/SettingsControls';
 import { PaymentMethodsEditor } from '../components/PaymentMethodsEditor';
+import { useBackupStatus, useRunDailyBackupNow } from '../../automations/hooks/useAutomations';
 
 const TABS = [
     { id: 'company', label: 'Empresa', icon: Building2 },
@@ -67,6 +69,29 @@ const emptyAutomations = {
 
 const toInputValue = (value) => value ?? '';
 const cleanNullable = (value) => (value === '' ? null : value);
+
+const formatDate = (value) => {
+    if (!value) return '-';
+    return new Intl.DateTimeFormat('es-PE', {
+        dateStyle: 'short',
+        timeStyle: 'short',
+    }).format(new Date(value));
+};
+
+const BackupStatusBadge = ({ status }) => {
+    const normalized = (status || 'PENDING').toUpperCase();
+    const styles = {
+        SUCCESS: 'bg-emerald-50 text-emerald-700',
+        SKIPPED: 'bg-amber-50 text-amber-700',
+        FAILED: 'bg-rose-50 text-rose-700',
+        PENDING: 'bg-slate-100 text-slate-600',
+    };
+    return (
+        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-black ${styles[normalized] || styles.PENDING}`}>
+            {normalized}
+        </span>
+    );
+};
 
 const normalizeCompany = (company = emptyCompany) => ({
     ...emptyCompany,
@@ -129,6 +154,8 @@ const SettingsPage = () => {
     const updateWebhookSettings = useUpdateWebhookSettings();
     const testWebhook = useTestWebhook();
     const updatePaymentMethod = useUpdatePaymentMethodSettings();
+    const backupStatusQuery = useBackupStatus();
+    const runBackupNow = useRunDailyBackupNow();
 
     useEffect(() => {
         if (!settingsQuery.data) return;
@@ -188,6 +215,20 @@ const SettingsPage = () => {
             Swal.fire({ icon: 'success', title: 'Webhook enviado correctamente', text: 'n8n recibio el payload de prueba.' });
         } catch (error) {
             Swal.fire({ icon: 'error', title: 'No se pudo probar la conexion', text: error.response?.data?.detail || error.message });
+        }
+    };
+
+    const runBackupManually = async () => {
+        try {
+            const result = await runBackupNow.mutateAsync();
+            const rows = result.rows_exported ?? 0;
+            Swal.fire({
+                icon: result.success ? 'success' : 'error',
+                title: result.status === 'SKIPPED' ? 'Sin cambios nuevos' : result.success ? 'Backup ejecutado' : 'Backup fallido',
+                text: result.message || `Filas exportadas: ${rows}`,
+            });
+        } catch (error) {
+            Swal.fire({ icon: 'error', title: 'No se pudo ejecutar', text: error.response?.data?.detail || error.message });
         }
     };
 
@@ -367,42 +408,71 @@ const SettingsPage = () => {
         }
 
         if (activeTab === 'automations') {
+            const backupStatus = backupStatusQuery.data || {};
             return (
-                <Section title="Configuracion n8n" description="Conexion inicial ERP a Webhook para pruebas controladas.">
-                    <FieldGrid>
-                        <Field label="Activar Webhook">
-                            <Toggle
-                                disabled={!canEdit}
-                                checked={Boolean(system.automations.webhook_enabled)}
-                                onChange={(v) => updateSection('automations', 'webhook_enabled', v)}
-                            />
-                        </Field>
-                        <Field label="URL Webhook">
-                            <TextInput
-                                readOnly={!canEdit}
-                                placeholder="http://localhost:5678/webhook-test/..."
-                                value={system.automations.webhook_url || ''}
-                                onChange={(e) => updateSection('automations', 'webhook_url', e.target.value)}
-                            />
-                        </Field>
-                        <Field label="Secret opcional">
-                            <TextInput
-                                readOnly={!canEdit}
-                                type="password"
-                                value={system.automations.webhook_secret || ''}
-                                onChange={(e) => updateSection('automations', 'webhook_secret', e.target.value)}
-                            />
-                        </Field>
-                    </FieldGrid>
-                    <div className="mt-5 flex flex-wrap justify-end gap-2">
-                        <Button onClick={saveWebhook} disabled={!canEdit || isSaving}>
-                            <Save size={15} /> Guardar
-                        </Button>
-                        <Button onClick={testWebhookConnection} disabled={!canEdit || testWebhook.isPending}>
-                            <Send size={15} /> Probar Conexion
-                        </Button>
-                    </div>
-                </Section>
+                <div className="space-y-4">
+                    <Section title="Backup diario" description="Estado del respaldo incremental hacia Google Drive.">
+                        <div className="grid gap-3 md:grid-cols-3">
+                            <div className="rounded-lg border border-slate-200 p-4">
+                                <p className="text-xs font-black uppercase text-slate-400">Ultimo respaldo</p>
+                                <p className="mt-1 text-sm font-black text-slate-900">{formatDate(backupStatus.last_backup)}</p>
+                            </div>
+                            <div className="rounded-lg border border-slate-200 p-4">
+                                <p className="text-xs font-black uppercase text-slate-400">Proximo respaldo</p>
+                                <p className="mt-1 text-sm font-black text-slate-900">{formatDate(backupStatus.next_backup)}</p>
+                            </div>
+                            <div className="rounded-lg border border-slate-200 p-4">
+                                <p className="text-xs font-black uppercase text-slate-400">Estado</p>
+                                <div className="mt-1"><BackupStatusBadge status={backupStatus.status} /></div>
+                            </div>
+                        </div>
+                        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                            <div className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500">
+                                <CalendarClock size={16} />
+                                <span>Programado diariamente a las 22:30</span>
+                            </div>
+                            <Button onClick={runBackupManually} disabled={!canEdit || runBackupNow.isPending || backupStatusQuery.isLoading}>
+                                <Play size={15} /> Ejecutar ahora
+                            </Button>
+                        </div>
+                    </Section>
+
+                    <Section title="Configuracion n8n" description="Conexion inicial ERP a Webhook para pruebas controladas.">
+                        <FieldGrid>
+                            <Field label="Activar Webhook">
+                                <Toggle
+                                    disabled={!canEdit}
+                                    checked={Boolean(system.automations.webhook_enabled)}
+                                    onChange={(v) => updateSection('automations', 'webhook_enabled', v)}
+                                />
+                            </Field>
+                            <Field label="URL Webhook">
+                                <TextInput
+                                    readOnly={!canEdit}
+                                    placeholder="http://localhost:5678/webhook-test/..."
+                                    value={system.automations.webhook_url || ''}
+                                    onChange={(e) => updateSection('automations', 'webhook_url', e.target.value)}
+                                />
+                            </Field>
+                            <Field label="Secret opcional">
+                                <TextInput
+                                    readOnly={!canEdit}
+                                    type="password"
+                                    value={system.automations.webhook_secret || ''}
+                                    onChange={(e) => updateSection('automations', 'webhook_secret', e.target.value)}
+                                />
+                            </Field>
+                        </FieldGrid>
+                        <div className="mt-5 flex flex-wrap justify-end gap-2">
+                            <Button onClick={saveWebhook} disabled={!canEdit || isSaving}>
+                                <Save size={15} /> Guardar
+                            </Button>
+                            <Button onClick={testWebhookConnection} disabled={!canEdit || testWebhook.isPending}>
+                                <Send size={15} /> Probar Conexion
+                            </Button>
+                        </div>
+                    </Section>
+                </div>
             );
         }
 

@@ -20,4 +20,14 @@ export const automationsService = {
         const response = await apiClient.post('/exports/tracking/reset', { module });
         return response.data;
     },
+
+    getBackupStatus: async () => {
+        const response = await apiClient.get('/exports/backup-status');
+        return response.data;
+    },
+
+    runDailyBackupNow: async () => {
+        const response = await apiClient.post('/exports/daily-run', { incremental: true, trigger_type: 'manual' });
+        return response.data;
+    },
 };
