@@ -190,3 +190,92 @@ body {
         padding: var(--space-lg) var(--space-lg);
     }
 }
+
+/* ============================================================
+   MICROINTERACCIONES — transiciones globales
+   ============================================================ */
+
+/* Transición suave en todos los elementos interactivos */
+button,
+a,
+[role="button"] {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Activo: micro-tap */
+button:active:not(:disabled),
+[role="button"]:active {
+    transform: scale(0.98);
+}
+
+/* Links sin subrayado por defecto, con hover underline si se quiere */
+a {
+    text-decoration: none;
+}
+
+/* ============================================================
+   SKELETON PULSE — override más suave
+   ============================================================ */
+
+@keyframes erp-pulse {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0.45; }
+}
+
+.animate-pulse {
+    animation: erp-pulse 1.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ============================================================
+   TABLAS — mejoras globales de percepción
+   ============================================================ */
+
+table {
+    border-spacing: 0;
+}
+
+/* Números monoespaciados en celdas numéricas */
+.tabular-nums,
+.font-mono {
+    font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   INPUTS — cursor y selección
+   ============================================================ */
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,
+select {
+    cursor: text;
+}
+
+input[disabled],
+textarea[disabled],
+select[disabled] {
+    cursor: not-allowed;
+}
+
+/* ============================================================
+   MODAL — sin scroll exterior cuando está abierto
+   ============================================================ */
+
+body.modal-open {
+    overflow: hidden;
+}
+
+/* ============================================================
+   PRINT — ocultar navegación al imprimir
+   ============================================================ */
+
+@media print {
+    aside, header, nav, .no-print {
+        display: none !important;
+    }
+    main {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+}

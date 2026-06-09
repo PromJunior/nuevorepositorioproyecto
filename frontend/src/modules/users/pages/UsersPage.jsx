@@ -4,9 +4,12 @@ import withReactContent from 'sweetalert2-react-content';
 import { Plus, Search, Shield } from 'lucide-react';
 import { PageHeader } from '../../../shared/components/PageHeader';
 import { DataState } from '../../../shared/components/DataState';
+import { SkeletonTable } from '../../../shared/components/Loader';
 import { Card } from '../../../shared/components/ui/card';
 import { Button } from '../../../shared/components/ui/button';
 import { Input } from '../../../shared/components/ui/input';
+import { Select } from '../../../shared/components/ui/select';
+import { FormField } from '../../../shared/components/ui/form-field';
 import { Modal } from '../../../shared/components/Modal';
 import { Pagination } from '../../../shared/components/Pagination';
 import { ExportButtons } from '../../../shared/components/ExportButtons';
@@ -225,12 +228,14 @@ const UsersPage = () => {
                         placeholder="Buscar por username o nombre..."
                         value={query}
                         onChange={(e) => { setQuery(e.target.value); setPage(1); }}
+                        aria-label="Buscar usuario"
                     />
                 </div>
-                <select
-                    className="rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500"
+                <Select
                     value={filterRole}
                     onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
+                    aria-label="Filtrar por rol"
+                    className="sm:w-44"
                 >
                     <option value="">Todos los roles</option>
                     {roles.map((r) => (
@@ -238,16 +243,17 @@ const UsersPage = () => {
                             {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
                         </option>
                     ))}
-                </select>
-                <select
-                    className="rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2 text-sm font-semibold text-slate-700 outline-none focus:border-blue-500"
+                </Select>
+                <Select
                     value={filterStatus}
                     onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                    aria-label="Filtrar por estado"
+                    className="sm:w-44"
                 >
                     <option value="">Todos los estados</option>
                     <option value="active">Activos</option>
                     <option value="inactive">Inactivos</option>
-                </select>
+                </Select>
             </Card>
 
             {/* Tabla */}
@@ -255,6 +261,8 @@ const UsersPage = () => {
                 isLoading={usersQuery.isLoading}
                 isError={usersQuery.isError}
                 isEmpty={!usersQuery.isLoading && filtered.length === 0}
+                skeleton={<SkeletonTable rows={8} cols={5} />}
+                onRetry={() => usersQuery.refetch()}
                 loadingLabel="Cargando usuarios..."
                 emptyTitle="Sin usuarios"
                 emptyDescription="Crea el primer usuario usando el botón de arriba."
@@ -274,7 +282,7 @@ const UsersPage = () => {
                                 title="Usuarios y roles"
                                 disabled={filtered.length === 0}
                             />
-                            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+                            <Pagination page={page} totalPages={totalPages} total={filtered.length} pageSize={PAGE_SIZE} onPageChange={setPage} />
                         </div>
                     </div>
                     <UserTable
@@ -334,18 +342,19 @@ const UsersPage = () => {
                     </>
                 }
             >
-                <form id="role-form" onSubmit={handleCreateRole} className="space-y-3">
-                    <div className="space-y-1">
-                        <label className="block text-xs font-bold uppercase tracking-wider text-slate-700">
-                            Nombre del rol
-                        </label>
+                <form id="role-form" onSubmit={handleCreateRole} className="space-y-4">
+                    <FormField
+                        label="Nombre del rol"
+                        hint="Se guardará en minúsculas. Ej: almacen, caja, supervisor."
+                    >
                         <Input
                             value={newRoleName}
                             placeholder="ej: supervisor, almacen, caja"
                             onChange={(e) => setNewRoleName(e.target.value.toLowerCase())}
                             required
+                            aria-label="Nombre del nuevo rol"
                         />
-                    </div>
+                    </FormField>
                     <div className="space-y-1">
                         <p className="text-xs font-semibold text-slate-500">Roles existentes:</p>
                         <div className="flex flex-wrap gap-1.5">

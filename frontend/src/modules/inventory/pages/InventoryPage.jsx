@@ -22,6 +22,7 @@ import { ProductModal } from '../components/ProductModal';
 import { StockModal } from '../components/StockModal';
 import { useAuthStore } from '../../../shared/store/useAuthStore';
 import { ExportButtons } from '../../../shared/components/ExportButtons';
+import { TableSkeletonRows, TableEmpty } from '../../../shared/components/Table';
 
 const MySwal = withReactContent(Swal);
 const MotionButton = motion.button;
@@ -376,17 +377,21 @@ const InventoryPage = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-100 text-sm font-medium text-slate-700">
                             {isLoading ? (
-                                <tr>
-                                    <td colSpan="8" className="py-20 text-center italic text-slate-400">Sincronizando inventario...</td>
-                                </tr>
+                                <TableSkeletonRows rows={8} cols={8} />
                             ) : isError ? (
-                                <tr>
-                                    <td colSpan="8" className="py-16 text-center italic text-red-400">{error?.message || 'No se pudo cargar el inventario.'}</td>
-                                </tr>
+                                <TableEmpty
+                                    colSpan={8}
+                                    message={error?.message || 'No se pudo cargar el inventario.'}
+                                />
                             ) : filteredProducts.length === 0 ? (
-                                <tr>
-                                    <td colSpan="8" className="py-16 text-center italic text-slate-400">No hay articulos que cumplan con los filtros actuales.</td>
-                                </tr>
+                                <TableEmpty
+                                    colSpan={8}
+                                    message={
+                                        searchTerm || selectedCategory !== 'Todas'
+                                            ? 'No hay artículos que cumplan con los filtros actuales.'
+                                            : 'El catálogo está vacío. Agrega el primer producto.'
+                                    }
+                                />
                             ) : (
                                 filteredProducts.map((product) => {
                                     const lowStockTrigger = Number(product.stock) < 5;
