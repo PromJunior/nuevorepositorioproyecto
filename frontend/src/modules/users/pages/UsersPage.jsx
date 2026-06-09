@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
-import { Plus, Search, Shield } from 'lucide-react';
+import { Plus, Search, Shield, X } from 'lucide-react';
 import { PageHeader } from '../../../shared/components/PageHeader';
 import { DataState } from '../../../shared/components/DataState';
+import { FilterPanel } from '../../../shared/components/FilterPanel';
 import { SkeletonTable } from '../../../shared/components/Loader';
 import { Card } from '../../../shared/components/ui/card';
 import { Button } from '../../../shared/components/ui/button';
@@ -13,6 +14,7 @@ import { FormField } from '../../../shared/components/ui/form-field';
 import { Modal } from '../../../shared/components/Modal';
 import { Pagination } from '../../../shared/components/Pagination';
 import { ExportButtons } from '../../../shared/components/ExportButtons';
+import { useDebounce } from '../../../shared/hooks/useDebounce';
 import { useAuthStore } from '../../../shared/store/useAuthStore';
 import {
     useUsers, useRoles,
@@ -48,10 +50,12 @@ const UsersPage = () => {
     const createRoleMutation = useCreateRole();
 
     // ─── UI state ─────────────────────────────────────────────────────────────
-    const [query, setQuery] = useState('');
+    const [searchInput, setSearchInput] = useState('');
     const [filterRole, setFilterRole] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [page, setPage] = useState(1);
+
+    const query = useDebounce(searchInput, 300);
     const [showPassword, setShowPassword] = useState(false);
 
     // Modal usuario
@@ -220,41 +224,58 @@ const UsersPage = () => {
             </div>
 
             {/* Filtros */}
-            <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3.5 top-2.5 text-slate-400" size={14} />
-                    <Input
-                        className="pl-9"
-                        placeholder="Buscar por username o nombre..."
-                        value={query}
-                        onChange={(e) => { setQuery(e.target.value); setPage(1); }}
-                        aria-label="Buscar usuario"
-                    />
+            <FilterPanel
+                label="Búsqueda y filtros"
+                activeCount={[searchInput, filterRole, filterStatus].filter(Boolean).length}
+                onClear={() => { setSearchInput(''); setFilterRole(''); setFilterStatus(''); setPage(1); }}
+                defaultOpen
+            >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                    <div className="relative flex-1">
+                        <Search className="pointer-events-none absolute left-3.5 top-2.5 text-slate-400" size={14} />
+                        <Input
+                            className="pl-9 pr-9"
+                            placeholder="Buscar por username o nombre..."
+                            value={searchInput}
+                            onChange={(e) => { setSearchInput(e.target.value); setPage(1); }}
+                            aria-label="Buscar usuario"
+                        />
+                        {searchInput && (
+                            <button
+                                type="button"
+                                onClick={() => { setSearchInput(''); setPage(1); }}
+                                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-700"
+                                aria-label="Limpiar búsqueda"
+                            >
+                                <X size={14} />
+                            </button>
+                        )}
+                    </div>
+                    <Select
+                        value={filterRole}
+                        onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
+                        aria-label="Filtrar por rol"
+                        className="sm:w-44"
+                    >
+                        <option value="">Todos los roles</option>
+                        {roles.map((r) => (
+                            <option key={r.id} value={r.name}>
+                                {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
+                            </option>
+                        ))}
+                    </Select>
+                    <Select
+                        value={filterStatus}
+                        onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
+                        aria-label="Filtrar por estado"
+                        className="sm:w-44"
+                    >
+                        <option value="">Todos los estados</option>
+                        <option value="active">Activos</option>
+                        <option value="inactive">Inactivos</option>
+                    </Select>
                 </div>
-                <Select
-                    value={filterRole}
-                    onChange={(e) => { setFilterRole(e.target.value); setPage(1); }}
-                    aria-label="Filtrar por rol"
-                    className="sm:w-44"
-                >
-                    <option value="">Todos los roles</option>
-                    {roles.map((r) => (
-                        <option key={r.id} value={r.name}>
-                            {r.name.charAt(0).toUpperCase() + r.name.slice(1)}
-                        </option>
-                    ))}
-                </Select>
-                <Select
-                    value={filterStatus}
-                    onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-                    aria-label="Filtrar por estado"
-                    className="sm:w-44"
-                >
-                    <option value="">Todos los estados</option>
-                    <option value="active">Activos</option>
-                    <option value="inactive">Inactivos</option>
-                </Select>
-            </Card>
+            </FilterPanel>
 
             {/* Tabla */}
             <DataState
