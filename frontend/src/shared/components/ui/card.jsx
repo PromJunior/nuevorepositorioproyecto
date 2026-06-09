@@ -25,16 +25,20 @@ export const CardFooter = ({ className, ...props }) => (
 );
 
 /* Stat card — for KPI metrics */
-export const StatCard = ({ label, value, sub, icon: Icon, trend, className, ...props }) => (
+export const StatCard = ({
+    label, value, sub, icon: Icon, trend, className,
+    iconClassName = 'bg-blue-50 text-blue-600',
+    ...props
+}) => (
     <div className={cn('rounded-xl border border-slate-200 bg-white p-5 shadow-sm', className)} {...props}>
         <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-semibold uppercase tracking-widest text-slate-400">{label}</p>
-                <p className="mt-1.5 text-2xl font-black tracking-tight text-slate-900">{value}</p>
+                <p className="truncate text-[10px] font-bold uppercase tracking-widest text-slate-400">{label}</p>
+                <p className="mt-2 text-2xl font-black tracking-tight text-slate-900 tabular-nums">{value}</p>
                 {sub && <p className="mt-1 text-xs font-medium text-slate-500">{sub}</p>}
                 {trend !== undefined && (
                     <p className={cn(
-                        'mt-1.5 text-xs font-bold',
+                        'mt-1.5 inline-flex items-center gap-1 text-xs font-bold',
                         trend > 0 ? 'text-emerald-600' : trend < 0 ? 'text-red-500' : 'text-slate-400',
                     )}>
                         {trend > 0 ? '▲' : trend < 0 ? '▼' : '—'} {Math.abs(trend)}%
@@ -42,7 +46,10 @@ export const StatCard = ({ label, value, sub, icon: Icon, trend, className, ...p
                 )}
             </div>
             {Icon && (
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                <div className={cn(
+                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                    iconClassName,
+                )}>
                     <Icon size={20} />
                 </div>
             )}

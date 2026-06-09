@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertTriangle, ExternalLink } from 'lucide-react';
-import { Card } from '../../../shared/components/ui/card';
+import { AlertTriangle, ArrowRight, ExternalLink } from 'lucide-react';
+import { Badge } from '../../../shared/components/ui/badge';
 import { Button } from '../../../shared/components/ui/button';
 import { formatNumber } from '../../../shared/utils/formatters';
 import { useLowStock } from '../hooks/useDashboard';
@@ -14,63 +14,65 @@ export const LowStockTable = ({ threshold = 5 }) => {
     if (products.length === 0) return null;
 
     return (
-        <Card className="overflow-hidden border-amber-200">
-            <div className="flex items-center justify-between border-b border-amber-100 bg-amber-50 p-4">
-                <div className="flex items-center gap-2">
-                    <AlertTriangle size={16} className="text-amber-600" />
+        <div className="overflow-hidden rounded-xl border border-amber-200 bg-white shadow-sm">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-amber-100 bg-amber-50 px-5 py-3.5">
+                <div className="flex items-center gap-2.5">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100">
+                        <AlertTriangle size={15} className="text-amber-600" />
+                    </div>
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-500">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">
                             Alerta de inventario
                         </p>
-                        <h3 className="text-sm font-black text-amber-800">
-                            {products.length} producto{products.length !== 1 ? 's' : ''} por reponer
+                        <h3 className="text-sm font-bold text-amber-900">
+                            {products.length} producto{products.length !== 1 ? 's' : ''} requieren reposición
                         </h3>
                     </div>
                 </div>
                 <Button
-                    variant="secondary"
-                    className="text-xs"
+                    variant="outline"
+                    size="sm"
+                    className="border-amber-300 bg-white text-amber-700 hover:bg-amber-50"
                     onClick={() => navigate('/inventario')}
                 >
-                    Ver inventario
+                    Ver inventario <ArrowRight size={13} />
                 </Button>
             </div>
 
+            {/* List */}
             <div className="divide-y divide-slate-100">
                 {products.map((p) => (
                     <div
                         key={p.id}
-                        className="group flex items-center justify-between px-4 py-3 hover:bg-amber-50/40 transition-colors"
+                        className="group flex items-center justify-between px-5 py-3 transition-colors hover:bg-amber-50/30"
                     >
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex min-w-0 items-center gap-3">
                             <button
                                 onClick={() => navigate(`/kardex/producto/${p.id}`)}
-                                className="flex items-center gap-1 text-left text-sm font-semibold text-slate-800 hover:text-blue-600 transition-colors truncate"
+                                className="flex min-w-0 items-center gap-1.5 text-left text-sm font-semibold text-slate-800 transition-colors hover:text-blue-600"
                             >
                                 <span className="truncate">{p.name_product}</span>
                                 <ExternalLink
-                                    size={10}
-                                    className="shrink-0 opacity-0 group-hover:opacity-100 text-blue-400 transition-opacity"
+                                    size={11}
+                                    className="shrink-0 text-blue-400 opacity-0 transition-opacity group-hover:opacity-100"
                                 />
                             </button>
                             {p.category_name && (
-                                <span className="hidden sm:block text-[11px] text-slate-400">
+                                <span className="hidden text-[11px] font-medium text-slate-400 sm:block">
                                     {p.category_name}
                                 </span>
                             )}
                         </div>
-                        <span
-                            className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-black ${
-                                p.stock === 0
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-amber-100 text-amber-700'
-                            }`}
+                        <Badge
+                            variant={p.stock === 0 ? 'danger' : 'warning'}
+                            dot
                         >
                             {p.stock === 0 ? 'Agotado' : `${formatNumber(p.stock)} uds.`}
-                        </span>
+                        </Badge>
                     </div>
                 ))}
             </div>
-        </Card>
+        </div>
     );
 };
