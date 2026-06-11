@@ -8,7 +8,13 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session, joinedload
 
-from auth.security import get_current_admin_user, get_current_user, get_user_role_name, require_admin_or_api_key
+from auth.security import (
+    get_current_admin_user,
+    get_current_user,
+    get_user_role_name,
+    require_admin_or_api_key,
+    verify_export_access,
+)
 from crud import report_crud
 from crud.settings_crud import get_or_create_company_settings, get_or_create_system_settings
 from database.database import get_db
@@ -631,7 +637,7 @@ def _run_daily_modules(db: Session, scheduled_date: date) -> list[dict[str, Any]
 def run_daily_backup(
     payload: DailyRunRequest,
     db: Session = Depends(get_db),
-    _: User | None = Depends(require_admin_or_api_key),
+    _: User | None = Depends(verify_export_access),
 ):
     if not payload.incremental:
         raise HTTPException(
@@ -683,7 +689,7 @@ def run_missed_backup(
 def upload_export_csv(
     payload: UploadExportRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_admin_user),
+    current_user: User | None = Depends(verify_export_access),
 ):
     requested_module = payload.module.strip().lower()
     module = _canonical_module(payload.module)
